@@ -28,10 +28,10 @@ int main(int argc, char *argv[]){
     return EXIT_FAILURE;
   }
 
-  /*
+  
   if (pearson_cor(matrix, vector, n) == NULL){
     printf("Error!\n");
-  }*/
+  }
 
   //free matrix
   for (int i = 0; i < n; i++)
