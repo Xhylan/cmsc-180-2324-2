@@ -9,8 +9,8 @@ double * pearson_cor(int ** matrix, int * vector, int n);
 
 int main(int argc, char *argv[]){
   int ** matrix = NULL, * vector = NULL, n = 0;
-  double * rho_vector = NULL;
-  //clock_t start, end;
+  double * rho_vector = NULL, time_elapsed;
+  clock_t start, end;
 
   if (argc < 2) {
     printf("Please enter n (n > 0): ");
@@ -36,15 +36,18 @@ int main(int argc, char *argv[]){
     return EXIT_FAILURE;
   }
 
+  sleep(1);
+
+  start = clock(); 
   rho_vector = pearson_cor(matrix, vector, n);
+  end = clock();
+  time_elapsed = ((double) end - start) / CLOCKS_PER_SEC;
+  
   if (rho_vector == NULL){
     printf("Error!\n");
-  }else{
-    for (int i = 0; i < n; i++) {
-      printf("%.4f ", rho_vector[i]);
-    }
   }
 
+  printf("Elapsed time: %f\n", time_elapsed);
   //free matrix
   for (int i = 0; i < n; i++)
     free(matrix[i]);
