@@ -41,7 +41,7 @@ int main(int argc, char *argv[]){
     printf("Error!\n");
   }else{
     for (int i = 0; i < n; i++) {
-      printf("%.2f ", rho_vector[i]);
+      printf("%.4f ", rho_vector[i]);
     }
   }
 
@@ -62,22 +62,28 @@ double * pearson_cor(int ** matrix, int * vector, int n){
   double * rho_vector = NULL;
   int x, x_sq, y, y_sq, xy;
   double numerator, denominator;
-
+  
   rho_vector = (double *) malloc(n * sizeof(double));
   if(vector == NULL)
       return NULL;
 
   for (int i = 0; i < n; i++){
+    x = x_sq = y = y_sq = xy = 0;
     int * vector_col_i = get_vector_from_column(matrix, n, i); //get column as vector
     
-    y = get_vector_sum(vector, n);
-    x = get_vector_sum(vector_col_i, n);
-    x_sq = get_vector_sum_sq(vector_col_i, n);
-    y_sq = get_vector_sum_sq(vector, n);
-    xy = get_sum_of_products(vector_col_i, vector, n);
+    for (int j = 0; j < n; j++) {
+      x += vector_col_i[j];
+      y += vector[i];
+      x_sq += vector_col_i[j] * vector_col_i[j];
+      y_sq += vector[j] * vector[j];
+      xy += vector_col_i[j] * vector[j];
+    }
+
     numerator = (double) (n * xy) - (y*x);
     denominator = sqrt(((n*x_sq) - (x*x)) * ((n*y_sq) * (y*y)));
-    rho_vector[i] = numerator / denominator;
+    
+    if (denominator == 0) rho_vector[i] = NAN;
+    if (denominator != 0) rho_vector[i] = numerator / denominator;
 
     free(vector_col_i);
   }
