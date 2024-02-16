@@ -1,4 +1,5 @@
 import random
+import time
 
 
 def init_matrix(n, min, max):
@@ -53,6 +54,10 @@ def pearson_cor(matrix, vector, size):
             summ_x_sq = summ_x_sq + (x_col_i[j] ** 2)
             summ_y_sq = summ_y_sq + (vector[j] ** 2)
             summ_xy = summ_xy + (x_col_i[j] * vector[j])
+        numerator = (size * summ_xy) - (summ_y * summ_x)
+        denominator = ((size * summ_x_sq) - (summ_x ** 2)) * \
+            ((size * summ_y_sq) - (summ_y ** 2)) ** 0.5
+        rho_vector.append(numerator/denominator)
 
     return rho_vector
 
@@ -64,13 +69,17 @@ def main():
         n = int(input("Please enter n: "))
 
     matrix = init_matrix(n, 1, 10)
-    print_matrix(n, matrix)
     vector = init_vector(n, 1, 10)
 
-    pearson_cor(matrix, vector, n)
+    start = time.time()
+    rho_vector = pearson_cor(matrix, vector, n)
+    end = time.time()
+    elapsed = end - start
+    print(f"Function pearson_cor ran for {elapsed:.4f} seconds.")
 
     matrix = None
     vector = None
+    rho_vector = None
 
 
 if __name__ == "__main__":
