@@ -22,13 +22,13 @@ def init_vector(n, min, max):
     return vector
 
 
-def init_empty_vector(n):
-    vector = []
+def get_column_i(matrix, i, size):
+    column = []
 
-    for i in range(0, n):
-        vector.append(0)
+    for iter in range(0, size):
+        column.append(matrix[iter][i])
 
-    return vector
+    return column
 
 
 def print_matrix(n, matrix):
@@ -36,14 +36,23 @@ def print_matrix(n, matrix):
         for j in range(0, n):
             print(str(matrix[i][j]), end="\t")
         print("\n")
-
 #
 # TODO: Complete the following function.
 # Use lab01.c as your guide.
 
 
 def pearson_cor(matrix, vector, size):
-    rho_vector = init_empty_vector(size)
+    rho_vector = []
+
+    for i in range(0, size):
+        summ_x = summ_y = summ_x_sq = summ_y_sq = summ_xy = 0
+        x_col_i = get_column_i(matrix, i, size)
+        for j in range(0, size):
+            summ_x = summ_x + x_col_i[j]
+            summ_y = summ_y + vector[j]
+            summ_x_sq = summ_x_sq + (x_col_i[j] ** 2)
+            summ_y_sq = summ_y_sq + (vector[j] ** 2)
+            summ_xy = summ_xy + (x_col_i[j] * vector[j])
 
     return rho_vector
 
