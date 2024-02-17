@@ -25,24 +25,35 @@ int main(int argc, char *argv[]){
   }
 
   srand(time(NULL));
- 
+
+  printf("Initializing matrix...\n");
+  start = clock();
   matrix = init_matrix(n, 1, 10);
+  end = clock();
+  time_elapsed = ((double) end - start) / CLOCKS_PER_SEC;
   if(matrix == NULL){
     return EXIT_FAILURE;
   }
-  
+  printf("\nInitialization done. (Completed in %.4f seconds)\n", time_elapsed);
+
+  printf("Initializing vector...\n");
+  start = clock();
   vector = init_vector(n, 1, 10);
+  end = clock();
+  time_elapsed = ((double) end - start) / CLOCKS_PER_SEC;
   if(vector == NULL){
     return EXIT_FAILURE;
   }
+  printf("\nInitialization done. (Completed in %.4f seconds)\n", time_elapsed);
 
   sleep(1);
-
+  
+  printf("\nRunning function pearson_cor()...\n");
   start = clock(); 
   rho_vector = pearson_cor(matrix, vector, n);
   end = clock();
   time_elapsed = ((double) end - start) / CLOCKS_PER_SEC;
-  
+  printf("\nThe function has finished running.\n"); 
   if (rho_vector == NULL){
     printf("Error!\n");
   }
@@ -88,6 +99,7 @@ double * pearson_cor(int ** matrix, int * vector, int n){
     if (denominator == 0) rho_vector[i] = NAN;
     if (denominator != 0) rho_vector[i] = numerator / denominator;
 
+    track_progress(i+1, n);
     free(vector_col_i);
   }
 
