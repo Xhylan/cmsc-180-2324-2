@@ -15,7 +15,7 @@ def measure_execution_time(function):
         end = time.time()
         elapsed_time = end - start
         print(
-            f"\nFunction {function.__name__} ran for {elapsed_time:.4f} seconds.")
+            f"\rFunction {function.__name__} ran for {elapsed_time:.4f} seconds.")
         return result
     return wrapper
 
@@ -59,9 +59,6 @@ def print_matrix(n, matrix):
         for j in range(0, n):
             print(str(matrix[i][j]), end="\t")
         print("\n")
-#
-# TODO: Complete the following function.
-# Use lab01.c as your guide.
 
 
 @measure_execution_time
@@ -95,15 +92,10 @@ def main():
     matrix = init_matrix(n, 1, 10)
     vector = init_vector(n, 1, 10)
 
-    start = time.time()
-    rho_vector = pearson_cor(matrix, vector, n)
-    end = time.time()
-    elapsed = end - start
-    print(f"Function pearson_cor ran for {elapsed:.4f} seconds.")
+    pearson_cor(matrix, vector, n)
 
     matrix = None
     vector = None
-    rho_vector = None
 
 
 if __name__ == "__main__":
