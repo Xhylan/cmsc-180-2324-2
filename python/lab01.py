@@ -2,6 +2,25 @@ import random
 import time
 
 
+def track_progress(current, total):
+    progress = (current / total) * 100.00
+    print(f"\rProgress: {progress:.2f}% - {current} out of {total}", end="")
+
+
+def measure_execution_time(function):
+    def wrapper(*args, **kwargs):
+        print(f"Starting execution of {function.__name__}...")
+        start = time.time()
+        result = function(*args, **kwargs)
+        end = time.time()
+        elapsed_time = end - start
+        print(
+            f"\nFunction {function.__name__} ran for {elapsed_time:.4f} seconds.")
+        return result
+    return wrapper
+
+
+@measure_execution_time
 def init_matrix(n, min, max):
     matrix = []
 
@@ -9,16 +28,19 @@ def init_matrix(n, min, max):
         row = []
         for j in range(0, n):
             row.append(random.randint(min, max))
+            track_progress(((i * n) + j + 1), n*n)
         matrix.append(row)
 
     return matrix
 
 
+@measure_execution_time
 def init_vector(n, min, max):
     vector = []
 
     for i in range(0, n):
         vector.append(random.randint(min, max))
+        track_progress(i+1, n)
 
     return vector
 
@@ -42,6 +64,7 @@ def print_matrix(n, matrix):
 # Use lab01.c as your guide.
 
 
+@measure_execution_time
 def pearson_cor(matrix, vector, size):
     rho_vector = []
 
@@ -58,6 +81,7 @@ def pearson_cor(matrix, vector, size):
         denominator = ((size * summ_x_sq) - (summ_x ** 2)) * \
             ((size * summ_y_sq) - (summ_y ** 2)) ** 0.5
         rho_vector.append(numerator/denominator)
+        track_progress(i+1, size)
 
     return rho_vector
 
