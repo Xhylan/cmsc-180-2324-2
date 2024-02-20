@@ -82,23 +82,26 @@ double * pearson_cor(int ** matrix, int * vector, int n){
   if(vector == NULL)
       return NULL;
 
+  y = y_sq = 0;
+
   for (int i = 0; i < n; i++){
-    x = x_sq = y = y_sq = xy = 0;
+    y += vector[i];
+    y += vector[i] * vector[i];
+  }
+
+  for (int i = 0; i < n; i++){
+    x = x_sq = xy = 0;
 
     for (int j = 0; j < n; j++) {
       x += matrix[j][i];
       x_sq += matrix[j][i] * matrix[j][i];
-      y += vector[j];
-      y_sq += vector[j] * vector[j];
       xy += matrix[j][i] * vector[j];
     }
 
     numerator = (double) (n * xy) - (y*x);
     denominator = sqrt(((n*x_sq) - (x*x)) * ((n*y_sq) * (y*y)));
     
-    if (denominator == 0) rho_vector[i] = NAN;
-    if (denominator != 0) rho_vector[i] = numerator / denominator;
-
+    rho_vector[i] = (denominator == 0) ? NAN : numerator / denominator;
     track_progress(i+1, n);
   }
 
@@ -114,24 +117,25 @@ double * pearson_cor_o(int ** matrix, int * vector, int n){
   if(vector == NULL)
       return NULL;
 
+  y = y_sq = 0;
   for (int i = 0; i < n; i++){
-    x = x_sq = y = y_sq = xy = 0;
+    y += vector[i];
+    y += vector[i] * vector[i];
+  }
+
+  for (int i = 0; i < n; i++){
+    x = x_sq = xy = 0;
     int * vector_col_i = get_vector_from_column(matrix, n, i); //get column as vector
     
     for (int j = 0; j < n; j++) {
       x += vector_col_i[j];
-      y += vector[i];
-      x_sq += vector_col_i[j] * vector_col_i[j];
-      y_sq += vector[j] * vector[j];
+      x_sq += vector_col_i[j] * vector_col_i[j];     
       xy += vector_col_i[j] * vector[j];
     }
 
     numerator = (double) (n * xy) - (y*x);
     denominator = sqrt(((n*x_sq) - (x*x)) * ((n*y_sq) * (y*y)));
-    
-    if (denominator == 0) rho_vector[i] = NAN;
-    if (denominator != 0) rho_vector[i] = numerator / denominator;
-
+    rho_vector[i] = (denominator == 0) ? NAN : numerator/denominator;
     track_progress(i+1, n);
     free(vector_col_i);
   }
