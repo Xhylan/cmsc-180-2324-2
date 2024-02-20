@@ -67,6 +67,27 @@ def pearson_cor(matrix, vector, size):
 
     for i in range(0, size):
         summ_x = summ_y = summ_x_sq = summ_y_sq = summ_xy = 0
+        for j in range(0, size):
+            summ_x = summ_x + matrix[j][i]
+            summ_y = summ_y + vector[j]
+            summ_x_sq = summ_x_sq + (matrix[j][i] ** 2)
+            summ_y_sq = summ_y_sq + (vector[j] ** 2)
+            summ_xy = summ_xy + (matrix[j][i] * vector[j])
+        numerator = (size * summ_xy) - (summ_y * summ_x)
+        denominator = ((size * summ_x_sq) - (summ_x ** 2)) * \
+            ((size * summ_y_sq) - (summ_y ** 2)) ** 0.5
+        rho_vector.append(numerator/denominator)
+        track_progress(i+1, size)
+
+    return rho_vector
+
+
+@measure_execution_time
+def pearson_cor_o(matrix, vector, size):
+    rho_vector = []
+
+    for i in range(0, size):
+        summ_x = summ_y = summ_x_sq = summ_y_sq = summ_xy = 0
         x_col_i = get_column_i(matrix, i, size)
         for j in range(0, size):
             summ_x = summ_x + x_col_i[j]
@@ -92,7 +113,7 @@ def main():
     matrix = init_matrix(n, 1, 10)
     vector = init_vector(n, 1, 10)
 
-    pearson_cor(matrix, vector, n)
+    pearson_cor_o(matrix, vector, n)
 
     matrix = None
     vector = None
