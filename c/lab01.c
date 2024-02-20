@@ -27,49 +27,46 @@ int main(int argc, char *argv[]){
 
   srand(time(NULL));
 
-  printf("Initializing matrix...\n");
-  start = clock();
-  matrix = init_matrix(n, 1, 10);
-  end = clock();
-  time_elapsed = ((double) end - start) / CLOCKS_PER_SEC;
-  if(matrix == NULL){
-    return EXIT_FAILURE;
-  }
-  printf("\nInitialization done. (Completed in %.4f seconds)\n", time_elapsed);
+  for(int i = 0; i < 3; i++){
+    printf("\n\n[RUN #%d]\n", (i+1));
+    printf("\nInitializing matrix...\n");
+    start = clock();
+    matrix = init_matrix(n, 1, 10);
+    end = clock();
+    time_elapsed = ((double) end - start) / CLOCKS_PER_SEC;
+    if(matrix == NULL){
+      return EXIT_FAILURE;
+    }
+    printf("\nInitialization done. (Completed in %.4f seconds)\n", time_elapsed);
 
-  printf("Initializing vector...\n");
-  start = clock();
-  vector = init_vector(n, 1, 10);
-  end = clock();
-  time_elapsed = ((double) end - start) / CLOCKS_PER_SEC;
-  if(vector == NULL){
-    return EXIT_FAILURE;
-  }
-  printf("\nInitialization done. (Completed in %.4f seconds)\n", time_elapsed);
+    printf("\nInitializing vector...\n");
+    start = clock();
+    vector = init_vector(n, 1, 10);
+    end = clock();
+    time_elapsed = ((double) end - start) / CLOCKS_PER_SEC;
+    if(vector == NULL){
+      return EXIT_FAILURE;
+    }
+    printf("\nInitialization done. (Completed in %.4f seconds)\n", time_elapsed);
 
-  sleep(1);
+    printf("\nRunning function pearson_cor()...\n");
+    start = clock(); 
+    rho_vector = pearson_cor(matrix, vector, n);
+    end = clock();
+    time_elapsed = ((double) end - start) / CLOCKS_PER_SEC;
+    if (rho_vector == NULL){
+      printf("Error!\n");
+      return EXIT_FAILURE;
+    }
+    printf("\nElapsed time: %.4f seconds\n", time_elapsed);
   
-  printf("\nRunning function pearson_cor()...\n");
-  start = clock(); 
-  rho_vector = pearson_cor(matrix, vector, n);
-  end = clock();
-  time_elapsed = ((double) end - start) / CLOCKS_PER_SEC;
-  printf("\nThe function has finished running.\n"); 
-  if (rho_vector == NULL){
-    printf("Error!\n");
-  }
+    for (int i = 0; i < n; i++)
+      free(matrix[i]);
+    free(matrix);
+    free(vector);
+    free(rho_vector);
+    }
 
-  printf("Elapsed time: %f\n", time_elapsed);
-  //free matrix
-  for (int i = 0; i < n; i++)
-    free(matrix[i]);
-  free(matrix);
-
-  //free vector 
-  free(vector);
-
-  //free rho_vector
-  free(rho_vector);
   return EXIT_SUCCESS;
 }
 
