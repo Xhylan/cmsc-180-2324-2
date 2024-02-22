@@ -42,3 +42,7 @@ int * get_vector_from_column(int ** matrix, int n, int col){
   return vector;
 }
 
+void check_if_file_exists(FILE **fptr, char *filename){
+  if (access(filename, F_OK) == 0) *fptr = fopen(filename, "a");
+  if (access(filename, F_OK) != 0) *fptr = fopen(filename, "w");
+}

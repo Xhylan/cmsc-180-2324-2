@@ -13,6 +13,8 @@ int main(int argc, char *argv[]){
   double * rho_vector = NULL, time_elapsed;
   clock_t start, end;
 
+  FILE *fptr;
+
   if (argc < 2) {
     printf("Please enter n (n > 0): ");
     while(n < 1){
@@ -24,6 +26,11 @@ int main(int argc, char *argv[]){
   if (argc == 2) {
     int n = (int) *argv[1];
   }
+
+
+  check_if_file_exists(&fptr, "log/results.txt");
+  fprintf(fptr, "%d: ", n);
+  fclose(fptr);
 
   srand(time(NULL));
 
@@ -59,14 +66,22 @@ int main(int argc, char *argv[]){
       return EXIT_FAILURE;
     }
     printf("\nElapsed time: %.4f seconds\n", time_elapsed);
-  
+    
+    
+    check_if_file_exists(&fptr, "log/results.txt");
+    fprintf(fptr, "%.4f, ", time_elapsed);
+    fclose(fptr);
+
     for (int i = 0; i < n; i++)
       free(matrix[i]);
     free(matrix);
     free(vector);
     free(rho_vector);
     }
-
+ 
+  check_if_file_exists(&fptr, "log/results.txt");
+  fprintf(fptr, "\n");
+  fclose(fptr);
   return EXIT_SUCCESS;
 }
 
@@ -83,7 +98,7 @@ double * pearson_cor(int ** matrix, int * vector, int n){
 
   for (int i = 0; i < n; i++){
     y += vector[i];
-    y += vector[i] * vector[i];
+    y_sq += vector[i] * vector[i];
   }
 
   for (int i = 0; i < n; i++){
