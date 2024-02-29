@@ -1,3 +1,9 @@
+/***
+* lab02.c
+* Written by: Michael Anthony B. Dollentes
+* Date: 
+***/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -7,7 +13,9 @@
 #define SIZE 25000
 
 int ** MATRIX = NULL, * VECTOR = NULL;
+double ** RHO_VECTOR = NULL;
 
+/* collection of arguments to be passed to threads upon thread creation */
 typedef struct ARG_OBJECT{
   int start;
 }args;
@@ -16,16 +24,19 @@ int ** initialize_matrix(int min, int max);
 int * initialize_vector(int min, int max);
 void check_progress(int current, int total);
 
-int * pearson_cor(){
-  int * rho_vector = NULL;
+/* thread function */
+void * pearson_cor(void * args){
+  //TODO: Threaded implementation of pearson_cor()
 
-  return rho_vector;
+  return NULL;
 }
 
 int main(int argc, char *argv[]){
   int t;
   clock_t start, end;
   double elapsed;
+
+  pthread_t *threads = NULL;
 
   if (argc == 2)
     t = atoi(argv[1]);
@@ -53,12 +64,17 @@ int main(int argc, char *argv[]){
     end = clock();
     elapsed = ((double) end - start) / CLOCKS_PER_SEC;
 
+    threads = (pthread_t *) malloc(t * sizeof(pthread_t));
+
+    //TODO: Threaded implementation of pearson_cor
 
     for(int j = 0; j < SIZE; j++)
-      free(matrix[j]);
-    free(matrix);
+      free(MATRIX[j]);
+    free(MATRIX);
 
-    free(vector);
+    free(VECTOR);
+
+    free(threads);
   }
 
   return EXIT_SUCCESS;
@@ -91,9 +107,20 @@ int * initialize_vector(int min, int max){
   return vector;
 }
 
-void check_progress(int current, int total){
-  float progress = (float) current / total * 100;
+double * initialize_rho_vector(int min, int max){
+  double * vector = (double *) malloc(SIZE * sizeof(double));
 
-  printf("\rProgress: %.2f%% - (%d out of %d)...");
+  for(int i = 0; i < SIZE; i++){
+    vector[i] = 0;
+    check_progress(i+1, SIZE);
+  }
+
+  return vector;
+}
+
+void check_progress(int current, int total){
+  float progress = ((float) current / total) * 100;
+
+  printf("\rProgress: %.2f%% - (%d out of %d)...", progress, current, total);
   fflush(stdout);
 }
