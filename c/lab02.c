@@ -54,17 +54,17 @@ int main(int argc, char *argv[]){
   for (int i = 1; i <= 3; i++) {
     printf("\n[[RUN %d]]\n", i);
 
-    // printf("Initializing matrix...\n");
-    // start = clock();
-    // MATRIX = initialize_matrix(1, 10);
-    // end = clock();
-    // elapsed = ((double) end - start) / CLOCKS_PER_SEC;
+    printf("Initializing matrix...\n");
+    start = clock();
+    MATRIX = initialize_matrix(1, 10);
+    end = clock();
+    elapsed = ((double) end - start) / CLOCKS_PER_SEC;
 
-    // printf("Initializing vector...\n");
-    // start = clock();
-    // VECTOR = initialize_vector(1, 10);
-    // end = clock();
-    // elapsed = ((double) end - start) / CLOCKS_PER_SEC;
+    printf("Initializing vector...\n");
+    start = clock();
+    VECTOR = initialize_vector(1, 10);
+    end = clock();
+    elapsed = ((double) end - start) / CLOCKS_PER_SEC;
 
     threads = (pthread_t *) malloc(t * sizeof(pthread_t));
     thread_ids = (int *) malloc(t * sizeof(int));
@@ -80,11 +80,11 @@ int main(int argc, char *argv[]){
       pthread_join(threads[i], NULL);
     }
 
-    // for(int j = 0; j < SIZE; j++)
-    //   free(MATRIX[j]);
-    // free(MATRIX);
+    for(int j = 0; j < SIZE; j++)
+      free(MATRIX[j]);
+    free(MATRIX);
 
-    // free(VECTOR);
+    free(VECTOR);
 
     free(threads);
   }
