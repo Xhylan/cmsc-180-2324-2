@@ -101,7 +101,7 @@ int ** initialize_matrix(int min, int max){
   for(int i = 0; i < SIZE; i++){
     for(int j = 0; j < SIZE; j++){
       matrix[i][j] = rand() % (min - max) + min;
-      check_progress((i * n) + j + 1, SIZE*SIZE);
+      check_progress((i * SIZE) + j + 1, SIZE*SIZE);
     }
   }
 
