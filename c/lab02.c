@@ -27,7 +27,9 @@ void check_progress(int current, int total);
 /* thread function */
 void * pearson_cor(void * args){
   //TODO: Threaded implementation of pearson_cor()
+  int * thread_id = (int *) args;
 
+  printf("%d\n", *thread_id);
   return NULL;
 }
 
@@ -67,6 +69,14 @@ int main(int argc, char *argv[]){
     threads = (pthread_t *) malloc(t * sizeof(pthread_t));
 
     //TODO: Threaded implementation of pearson_cor
+
+    for (int i = 0; i < t; i++){
+      pthread_create(&threads[i], NULL, pearson_cor, (void *) &i);
+    }
+
+    for (int i = 0; i < t; i++){
+      pthread_join(threads[i], NULL);
+    }
 
     for(int j = 0; j < SIZE; j++)
       free(MATRIX[j]);
