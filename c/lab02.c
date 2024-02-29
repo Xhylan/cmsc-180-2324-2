@@ -34,7 +34,7 @@ void * pearson_cor(void * args){
 }
 
 int main(int argc, char *argv[]){
-  int t;
+  int t, *thread_ids = NULL;
   clock_t start, end;
   double elapsed;
 
@@ -67,11 +67,13 @@ int main(int argc, char *argv[]){
     // elapsed = ((double) end - start) / CLOCKS_PER_SEC;
 
     threads = (pthread_t *) malloc(t * sizeof(pthread_t));
+    thread_ids = (int *) malloc(t * sizeof(int));
 
     //TODO: Threaded implementation of pearson_cor
 
     for (int i = 0; i < t; i++){
-      pthread_create(&threads[i], NULL, pearson_cor, (void *) &i);
+      thread_ids[i] = i;
+      pthread_create(&threads[i], NULL, pearson_cor, (void *) &thread_ids[i]);
     }
 
     for (int i = 0; i < t; i++){
