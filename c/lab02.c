@@ -13,15 +13,19 @@
 #define SIZE 25000
 
 int ** MATRIX = NULL, * VECTOR = NULL;
-double ** RHO_VECTOR = NULL;
+double * RHO_VECTOR = NULL;
+pthread_mutex_t RHO_VECTOR_MUTEX;
 
 /* collection of arguments to be passed to threads upon thread creation */
 typedef struct ARG_OBJECT{
   int start;
 }args;
 
+double * initialize_rho_vector();
 int ** initialize_matrix(int min, int max);
 int * initialize_vector(int min, int max);
+int initialize_mutex();
+int destroy_mutex(); 
 void check_progress(int current, int total);
 
 /* thread function */
@@ -66,10 +70,18 @@ int main(int argc, char *argv[]){
     end = clock();
     elapsed = ((double) end - start) / CLOCKS_PER_SEC;
 
+    printf("Initializing results vector...\n");
+    RHO_VECTOR = initialize_rho_vector();
+    printf("Results vector has been created and initialized.\n");
+
     threads = (pthread_t *) malloc(t * sizeof(pthread_t));
     thread_ids = (int *) malloc(t * sizeof(int));
 
     //TODO: Threaded implementation of pearson_cor
+    if (initialize_mutex()){
+      printf("ERROR: Mutex failed to initialize.\n");
+      return EXIT_FAILURE;
+    }
 
     for (int i = 0; i < t; i++){
       thread_ids[i] = i;
@@ -83,10 +95,13 @@ int main(int argc, char *argv[]){
     for(int j = 0; j < SIZE; j++)
       free(MATRIX[j]);
     free(MATRIX);
-
     free(VECTOR);
 
     free(threads);
+    if(destroy_mutex()){
+      printf("ERROR: Failed to destroy mutex");
+      return EXIT_FAILURE;
+    }
   }
 
   return EXIT_SUCCESS;
@@ -119,7 +134,7 @@ int * initialize_vector(int min, int max){
   return vector;
 }
 
-double * initialize_rho_vector(int min, int max){
+double * initialize_rho_vector(){
   double * vector = (double *) malloc(SIZE * sizeof(double));
 
   for(int i = 0; i < SIZE; i++){
@@ -135,4 +150,16 @@ void check_progress(int current, int total){
 
   printf("\rProgress: %.2f%% - (%d out of %d)...", progress, current, total);
   fflush(stdout);
+}
+
+int initialize_mutex(){
+  int result = pthread_mutex_init(&RHO_VECTOR_MUTEX, NULL);
+  if (result != 0) return 1;
+  return 0;
+}
+
+int destroy_mutex(){
+  int result = pthread_mutex_destroy(&RHO_VECTOR_MUTEX);
+  if (result != 0) return 1;
+  return 0;
 }
