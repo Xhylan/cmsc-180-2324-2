@@ -139,7 +139,8 @@ int main(int argc, char *argv[]) {
     getchar();
   }
 
-  printf("Transpose matrix? (y/n)");
+  /* prompt user into transposing the matrix */
+  printf("Transpose matrix? (y/n) ");
   char res = getchar();
 
   if (tolower(res) == 'y')
@@ -153,6 +154,11 @@ int main(int argc, char *argv[]) {
   fprintf(file, "SIZE: %d, THREADS: %d\n", SIZE, t);
   fclose(file);
 
+  /*
+   * Display progress of the program. Show the time taken for each
+   * section, but only record the execution time after initializing
+   * matrix and vector.
+   */
   for (int i = 1; i <= 3; i++) {
     printf("\n[[RUN %d]]\n", i);
 
@@ -163,11 +169,17 @@ int main(int argc, char *argv[]) {
     elapsed = ((double)end - start) / CLOCKS_PER_SEC;
     printf("\nMatrix initialized. (%.6f seconds)\n", elapsed);
 
-    if (IS_MATRIX_TRANSPOSED) {
+    if (IS_MATRIX_TRANSPOSED == TRUE) {
       printf("Transposing matrix...\n");
       int **old_matrix = MATRIX;
       start = clock();
       MATRIX = transpose_matrix();
+
+      for (int j = 0; j < SIZE; j++) {
+        free(old_matrix[j]);
+      }
+      free(old_matrix);
+
       end = clock();
       elapsed = ((double)end - start) / CLOCKS_PER_SEC;
       printf("\nMatrix transposed. (%.6f seconds)\n", elapsed);
@@ -182,7 +194,7 @@ int main(int argc, char *argv[]) {
 
     printf("Initializing results vector...\n");
     RHO_VECTOR = initialize_rho_vector();
-    printf("Results vector has been created and initialized.\n");
+    printf("\nResults vector has been created and initialized.\n");
 
     /* create thread array and thread_id array */
     threads = (pthread_t *)malloc(t * sizeof(pthread_t));
@@ -193,15 +205,20 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
 
+    printf("Starting the computation...\n");
     start = clock();
 
     for (int i = 0; i < t; i++) {
       thread_ids[i] = i;
-      if (IS_MATRIX_TRANSPOSED)
-        pthread_create(&threads[i], NULL, pearson_cor_t,
-                       (void *)&thread_ids[i]);
+      arguments *arg = (arguments *)malloc(sizeof(arguments));
+
+      arg->thread_index = thread_ids[i];
+      arg->submatrix_size = SIZE / t;
+
+      if (IS_MATRIX_TRANSPOSED == TRUE)
+        pthread_create(&threads[i], NULL, pearson_cor_t, (void *)arg);
       else {
-        pthread_create(&threads[i], NULL, pearson_cor, (void *)&thread_ids[i]);
+        pthread_create(&threads[i], NULL, pearson_cor, (void *)arg);
       }
     }
 
@@ -210,14 +227,15 @@ int main(int argc, char *argv[]) {
     }
     end = clock();
     elapsed = ((double)end - start) / CLOCKS_PER_SEC;
-    printf("Elapsed time: %.4f\n", elapsed);
+    printf("Computation finished!\n");
+    printf("Elapsed time: %.4f seconds\n", elapsed);
 
     check_if_file_exists(&file, "log/results_threaded.txt");
 
-    if (i < 2)
+    if (i < 3)
       fprintf(file, "%.6f, ", elapsed);
 
-    if (i == 2)
+    if (i == 3)
       fprintf(file, "%.6f\n", elapsed);
 
     fclose(file);
