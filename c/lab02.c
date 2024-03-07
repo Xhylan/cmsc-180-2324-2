@@ -217,9 +217,9 @@ int main(int argc, char *argv[]) {
 
       if (IS_MATRIX_TRANSPOSED == TRUE)
         pthread_create(&threads[i], NULL, pearson_cor_t, (void *)arg);
-      else {
-        pthread_create(&threads[i], NULL, pearson_cor, (void *)arg);
-      }
+      
+      if (IS_MATRIX_TRANSPOSED == FALSE)
+        pthread_create(&threads[i], NULL, pearson_cor, (void *)arg); 
     }
 
     for (int i = 0; i < t; i++) {
