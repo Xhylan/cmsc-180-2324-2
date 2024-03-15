@@ -154,6 +154,37 @@ int main(int argc, char *argv[]) {
   fprintf(file, "SIZE: %d, THREADS: %d\n", SIZE, t);
   fclose(file);
 
+
+  printf("Initializing matrix...\n");
+  start = clock();
+  MATRIX = initialize_matrix(1, 10);
+  end = clock();
+  elapsed = ((double)end - start) / CLOCKS_PER_SEC;
+  printf("\nMatrix initialized. (%.6f seconds)\n", elapsed);
+
+  if (IS_MATRIX_TRANSPOSED == TRUE) {
+    printf("Transposing matrix...\n");
+    int **old_matrix = MATRIX;
+    start = clock();
+    MATRIX = transpose_matrix();
+
+    for (int j = 0; j < SIZE; j++) {
+      free(old_matrix[j]);
+    }
+    free(old_matrix);
+
+    end = clock();
+    elapsed = ((double)end - start) / CLOCKS_PER_SEC;
+    printf("\nMatrix transposed. (%.6f seconds)\n", elapsed);
+  }
+
+  printf("Initializing vector...\n");
+  start = clock();
+  VECTOR = initialize_vector(1, 10);
+  end = clock();
+  elapsed = ((double)end - start) / CLOCKS_PER_SEC;
+  printf("\nVector initialized. (%.6f seconds)\n", elapsed);
+
   /*
    * Display progress of the program. Show the time taken for each
    * section, but only record the execution time after initializing
@@ -162,35 +193,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i <= 3; i++) {
     printf("\n[[RUN %d]]\n", i);
 
-    printf("Initializing matrix...\n");
-    start = clock();
-    MATRIX = initialize_matrix(1, 10);
-    end = clock();
-    elapsed = ((double)end - start) / CLOCKS_PER_SEC;
-    printf("\nMatrix initialized. (%.6f seconds)\n", elapsed);
-
-    if (IS_MATRIX_TRANSPOSED == TRUE) {
-      printf("Transposing matrix...\n");
-      int **old_matrix = MATRIX;
-      start = clock();
-      MATRIX = transpose_matrix();
-
-      for (int j = 0; j < SIZE; j++) {
-        free(old_matrix[j]);
-      }
-      free(old_matrix);
-
-      end = clock();
-      elapsed = ((double)end - start) / CLOCKS_PER_SEC;
-      printf("\nMatrix transposed. (%.6f seconds)\n", elapsed);
-    }
-
-    printf("Initializing vector...\n");
-    start = clock();
-    VECTOR = initialize_vector(1, 10);
-    end = clock();
-    elapsed = ((double)end - start) / CLOCKS_PER_SEC;
-    printf("\nVector initialized. (%.6f seconds)\n", elapsed);
 
     printf("Initializing results vector...\n");
     RHO_VECTOR = initialize_rho_vector();
@@ -240,10 +242,6 @@ int main(int argc, char *argv[]) {
 
     fclose(file);
 
-    for (int j = 0; j < SIZE; j++)
-      free(MATRIX[j]);
-    free(MATRIX);
-    free(VECTOR);
     free(RHO_VECTOR);
 
     free(threads);
@@ -255,6 +253,10 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  for (int j = 0; j < SIZE; j++)
+    free(MATRIX[j]);
+  free(MATRIX);
+  free(VECTOR);
   return EXIT_SUCCESS;
 }
 
