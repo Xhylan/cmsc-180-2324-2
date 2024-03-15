@@ -31,7 +31,6 @@ typedef struct ARG_OBJECT {
 double *initialize_rho_vector();
 int **initialize_matrix(int min, int max);
 int *initialize_vector(int min, int max);
-int **transpose_matrix();
 int initialize_mutex();
 int destroy_mutex();
 void check_progress(int current, int total);
@@ -60,50 +59,22 @@ void *pearson_cor(void *args) {
   for (int i = start_index; i < end_index; i++) {
     summ_x = summ_x_sq = summ_xy = 0;
 
-    for (int j = 0; j < SIZE; j++) {
-      summ_x += MATRIX[j][i];
-      summ_x_sq += (MATRIX[j][i] * MATRIX[j][i]);
-      summ_xy += (MATRIX[j][i] * VECTOR[j]);
+    if(IS_MATRIX_TRANSPOSED){
+      for (int j = 0; j < SIZE; j++) {
+        summ_x += MATRIX[i][j];
+        summ_x_sq += (MATRIX[i][j] * MATRIX[i][j]);
+        summ_xy += (MATRIX[i][j] * VECTOR[j]);
+      }
     }
 
-    numerator = (double)(SIZE * summ_xy) - (summ_y * summ_x);
-    denominator = sqrt(((SIZE * summ_x_sq) - (summ_x * summ_x)) *
-                       ((SIZE * summ_y_sq) - (summ_y * summ_y)));
-    pthread_mutex_lock(&RHO_VECTOR_MUTEX);
-    RHO_VECTOR[i] = (denominator == 0) ? NAN : numerator / denominator;
-    pthread_mutex_unlock(&RHO_VECTOR_MUTEX);
-  }
-
-  return NULL;
-}
-
-void *pearson_cor_t(void *args) {
-  int summ_x, summ_x_sq, summ_y, summ_y_sq, summ_xy;
-  double numerator, denominator;
-  arguments *arg = (arguments *)args;
-
-  // compute for the start index, end index and the remainder
-  int remainder = SIZE % t;
-  int start_index = arg->thread_index * arg->submatrix_size;
-  int end_index = (arg->thread_index == t - 1)
-                      ? (start_index + arg->submatrix_size + remainder) - 1
-                      : (start_index + arg->submatrix_size) - 1;
-
-  // preemptively compute summation of vector values
-  summ_y = summ_y_sq = 0;
-  for (int i = 0; i < SIZE; i++) {
-    summ_y += VECTOR[i];
-    summ_y_sq += (VECTOR[i] * VECTOR[i]);
-  }
-
-  for (int i = start_index; i < end_index; i++) {
-    summ_x = summ_x_sq = summ_xy = 0;
-
-    for (int j = 0; j < SIZE; j++) {
-      summ_x += MATRIX[i][j];
-      summ_x_sq += (MATRIX[i][j] * MATRIX[i][j]);
-      summ_xy += (MATRIX[i][j] * VECTOR[j]);
+    if(IS_MATRIX_TRANSPOSED == FALSE){
+      for (int j = 0; j < SIZE; j++) {
+        summ_x += MATRIX[j][i];
+        summ_x_sq += (MATRIX[j][i] * MATRIX[j][i]);
+        summ_xy += (MATRIX[j][i] * VECTOR[j]);
+      } 
     }
+    
 
     numerator = (double)(SIZE * summ_xy) - (summ_y * summ_x);
     denominator = sqrt(((SIZE * summ_x_sq) - (summ_x * summ_x)) *
@@ -199,12 +170,8 @@ int main(int argc, char *argv[]) {
 
       arg->thread_index = thread_ids[i];
       arg->submatrix_size = SIZE / t;
-
-      if (IS_MATRIX_TRANSPOSED == TRUE)
-        pthread_create(&threads[i], NULL, pearson_cor_t, (void *)arg);
       
-      if (IS_MATRIX_TRANSPOSED == FALSE)
-        pthread_create(&threads[i], NULL, pearson_cor, (void *)arg); 
+      pthread_create(&threads[i], NULL, pearson_cor, (void *)arg); 
     }
 
     for (int i = 0; i < t; i++) {
@@ -268,23 +235,6 @@ int **initialize_matrix(int min, int max) {
   }
 
   return matrix;
-}
-
-int **transpose_matrix() {
-  int **transposed = (int **)malloc(sizeof(int *) * SIZE);
-
-  for (int i = 0; i < SIZE; i++) {
-    transposed[i] = (int *)malloc(sizeof(int) * SIZE);
-  }
-
-  for (int i = 0; i < SIZE; i++) {
-    for (int j = 0; j < SIZE; j++) {
-      transposed[i][j] = MATRIX[j][i];
-      check_progress((i * SIZE) + j + 1, SIZE * SIZE);
-    }
-  }
-
-  return transposed;
 }
 
 int *initialize_vector(int min, int max) {
