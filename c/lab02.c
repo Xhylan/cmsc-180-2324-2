@@ -162,22 +162,6 @@ int main(int argc, char *argv[]) {
   elapsed = ((double)end - start) / CLOCKS_PER_SEC;
   printf("\nMatrix initialized. (%.6f seconds)\n", elapsed);
 
-  if (IS_MATRIX_TRANSPOSED == TRUE) {
-    printf("Transposing matrix...\n");
-    int **old_matrix = MATRIX;
-    start = clock();
-    MATRIX = transpose_matrix();
-
-    for (int j = 0; j < SIZE; j++) {
-      free(old_matrix[j]);
-    }
-    free(old_matrix);
-
-    end = clock();
-    elapsed = ((double)end - start) / CLOCKS_PER_SEC;
-    printf("\nMatrix transposed. (%.6f seconds)\n", elapsed);
-  }
-
   printf("Initializing vector...\n");
   start = clock();
   VECTOR = initialize_vector(1, 10);
@@ -186,9 +170,8 @@ int main(int argc, char *argv[]) {
   printf("\nVector initialized. (%.6f seconds)\n", elapsed);
 
   /*
-   * Display progress of the program. Show the time taken for each
-   * section, but only record the execution time after initializing
-   * matrix and vector.
+   * Display progress of the program. 
+   * Shows the time taken for each runtime of the program.
    */
   for (int i = 1; i <= 3; i++) {
     printf("\n[[RUN %d]]\n", i);
@@ -266,10 +249,21 @@ int **initialize_matrix(int min, int max) {
   for (int i = 0; i < SIZE; i++)
     matrix[i] = (int *)malloc(SIZE * sizeof(int));
 
-  for (int i = 0; i < SIZE; i++) {
-    for (int j = 0; j < SIZE; j++) {
-      matrix[i][j] = rand() % (min - max) + min;
-      check_progress((i * SIZE) + j + 1, SIZE * SIZE);
+  if (IS_MATRIX_TRANSPOSED){
+    for (int i = 0; i < SIZE; i++) {
+     for (int j = 0; j < SIZE; j++) {
+        matrix[j][i] = rand() % (min - max) + min;
+        check_progress((i * SIZE) + j + 1, SIZE * SIZE);
+      }
+    }  
+  }
+  
+  if (IS_MATRIX_TRANSPOSED == FALSE) {
+    for (int i = 0; i < SIZE; i++) {
+      for (int j = 0; j < SIZE; j++) {
+        matrix[i][j] = rand() % (min - max) + min;
+        check_progress((i * SIZE) + j + 1, SIZE * SIZE);
+      }
     }
   }
 
