@@ -140,6 +140,7 @@ int main(int argc, char *argv[]) {
   elapsed = ((double)end - start) / CLOCKS_PER_SEC;
   printf("\nVector initialized. (%.6f seconds)\n", elapsed);
 
+  while (t > 0){
   /*
    * Display progress of the program. 
    * Shows the time taken for each runtime of the program.
@@ -201,6 +202,11 @@ int main(int argc, char *argv[]) {
       printf("ERROR: Failed to destroy mutex");
       return EXIT_FAILURE;
     }
+    }
+
+    printf("Enter t: ");
+    scanf("%d", &t);
+    getchar();
   }
 
   for (int j = 0; j < SIZE; j++)
