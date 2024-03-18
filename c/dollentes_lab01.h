@@ -1,3 +1,9 @@
+/*
+ * dollentes_lab01.h
+ * Author: Michael Anthony B. Dollentes
+ * Written for CMSC 180 T-6L.
+ */
+
 void track_progress(int current, int total){
   double progress = (double) current / total * 100; 
   printf("\rProgress: %.2f%% - (%d out of %d)", progress, current, total);

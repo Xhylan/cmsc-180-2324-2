@@ -1,5 +1,5 @@
 /***
- * lab02.c
+ * lab03.c
  * Written by: Michael Anthony B. Dollentes
  * Date:
  ***/
@@ -20,12 +20,6 @@ int **MATRIX = NULL, *VECTOR = NULL, t;
 double *RHO_VECTOR = NULL;
 pthread_mutex_t RHO_VECTOR_MUTEX;
 FILE *file;
-
-/* collection of arguments to be passed to threads upon thread creation */
-typedef struct ARG_OBJECT {
-  int thread_index;
-  int submatrix_size;
-} arguments;
 
 /* utility functions */
 double *initialize_rho_vector();
@@ -153,6 +147,7 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i <= 3; i++) {
     printf("\n[[RUN %d]]\n", i);
 
+
     printf("Initializing results vector...\n");
     RHO_VECTOR = initialize_rho_vector();
     printf("\nResults vector has been created and initialized.\n");
@@ -182,7 +177,6 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < t; i++) {
       pthread_join(threads[i], NULL);
     }
-    
     end = clock();
     elapsed = ((double)end - start) / CLOCKS_PER_SEC;
     printf("Computation finished!\n");
