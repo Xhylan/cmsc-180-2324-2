@@ -92,7 +92,7 @@ void *pearson_cor(void *args) {
 ***/
 int main(int argc, char *argv[]) {
   int *thread_ids = NULL;
-  clock_t start, end;
+  struct timespec start, finish;
   double elapsed;
 
   pthread_t *threads = NULL;
@@ -130,17 +130,19 @@ int main(int argc, char *argv[]) {
 
 
   printf("Initializing matrix...\n");
-  start = clock();
+  clock_gettime(CLOCK_MONOTONIC, &start);
   MATRIX = initialize_matrix(1, 10);
-  end = clock();
-  elapsed = ((double)end - start) / CLOCKS_PER_SEC;
+  clock_gettime(CLOCK_MONOTONIC, &finish);
+  elapsed = (finish.tv_sec - start.tv_sec);
+  elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
   printf("\nMatrix initialized. (%.6f seconds)\n", elapsed);
 
   printf("Initializing vector...\n");
-  start = clock();
+  clock_gettime(CLOCK_MONOTONIC, &start);
   VECTOR = initialize_vector(1, 10);
-  end = clock();
-  elapsed = ((double)end - start) / CLOCKS_PER_SEC;
+  clock_gettime(CLOCK_MONOTONIC, &finish);
+  elapsed = (finish.tv_sec - start.tv_sec);
+  elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
   printf("\nVector initialized. (%.6f seconds)\n", elapsed);
 
   while (t > 0){
@@ -167,7 +169,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Starting the computation...\n");
-    start = clock();
+    clock_gettime(CLOCK_MONOTONIC, &start);
 
     for (int i = 0; i < t; i++) {
       thread_ids[i] = i;
@@ -183,8 +185,9 @@ int main(int argc, char *argv[]) {
       pthread_join(threads[i], NULL);
     }
     
-    end = clock();
-    elapsed = ((double)end - start) / CLOCKS_PER_SEC;
+    clock_gettime(CLOCK_MONOTONIC, &finish);
+    elapsed = (finish.tv_sec - start.tv_sec);
+    elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
     printf("Computation finished!\n");
     printf("Elapsed time: %.4f seconds\n", elapsed);
 

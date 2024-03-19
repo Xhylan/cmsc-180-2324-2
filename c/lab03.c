@@ -3,6 +3,7 @@
  * Written by: Michael Anthony B. Dollentes
  * Date:
  ***/
+#define _GNU_SOURCE
 
 #include <ctype.h>
 #include <math.h>
@@ -11,6 +12,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/sysinfo.h>
 
 #define TRUE 0xFF
 #define FALSE 0x00
@@ -30,6 +32,12 @@ int destroy_mutex();
 void check_progress(int current, int total);
 void check_if_file_exists(FILE **file, char *filename);
 
+/* collection of arguments to be passed to threads upon thread creation */
+typedef struct ARG_OBJECT {
+  int thread_index;
+  int submatrix_size;
+} arguments;
+
 /* thread function */
 void *pearson_cor(void *args) {
   int summ_x, summ_x_sq, summ_y, summ_y_sq, summ_xy;
@@ -43,6 +51,7 @@ void *pearson_cor(void *args) {
                       ? (start_index + arg->submatrix_size + remainder) - 1
                       : (start_index + arg->submatrix_size) - 1;
 
+  printf("Thread running on CPU %d\n", sched_getcpu());
   // preemptively compute summation of vector values
   summ_y = summ_y_sq = 0;
   for (int i = 0; i < SIZE; i++) {
@@ -85,9 +94,10 @@ void *pearson_cor(void *args) {
 * MAIN FUNCTION
 ***/
 int main(int argc, char *argv[]) {
-  int *thread_ids = NULL;
-  clock_t start, end;
+  int *thread_ids = NULL, nprocs = sysconf(_SC_NPROCESSORS_CONF);
+  struct timespec start, finish;
   double elapsed;
+  cpu_set_t cpuset;
 
   pthread_t *threads = NULL;
 
@@ -118,24 +128,29 @@ int main(int argc, char *argv[]) {
 
   srand(time(NULL));
 
-  check_if_file_exists(&file, "log/results_threaded.txt");
+  check_if_file_exists(&file, "log/results_threaded_aff.txt");
   fprintf(file, "SIZE: %d, THREADS: %d\n", SIZE, t);
   fclose(file);
 
 
   printf("Initializing matrix...\n");
-  start = clock();
+  clock_gettime(CLOCK_MONOTONIC, &start);
   MATRIX = initialize_matrix(1, 10);
-  end = clock();
-  elapsed = ((double)end - start) / CLOCKS_PER_SEC;
+  clock_gettime(CLOCK_MONOTONIC, &finish);
+  elapsed = (finish.tv_sec - start.tv_sec);
+  elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
   printf("\nMatrix initialized. (%.6f seconds)\n", elapsed);
 
   printf("Initializing vector...\n");
-  start = clock();
+  clock_gettime(CLOCK_MONOTONIC, &start);
   VECTOR = initialize_vector(1, 10);
-  end = clock();
-  elapsed = ((double)end - start) / CLOCKS_PER_SEC;
+  clock_gettime(CLOCK_MONOTONIC, &finish);
+  elapsed = (finish.tv_sec - start.tv_sec);
+  elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
   printf("\nVector initialized. (%.6f seconds)\n", elapsed);
+
+  if (nprocs >= 4)
+    nprocs = nprocs - 1;
 
   while (t > 0){
   /*
@@ -145,6 +160,8 @@ int main(int argc, char *argv[]) {
   fprintf(file, "SIZE: %d, THREADS: %d\n", SIZE, t);
 
   for (int i = 1; i <= 3; i++) {
+    int core = 0;
+
     printf("\n[[RUN %d]]\n", i);
 
 
@@ -162,7 +179,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Starting the computation...\n");
-    start = clock();
+    clock_gettime(CLOCK_MONOTONIC, &start);
 
     for (int i = 0; i < t; i++) {
       thread_ids[i] = i;
@@ -172,17 +189,28 @@ int main(int argc, char *argv[]) {
       arg->submatrix_size = SIZE / t;
       
       pthread_create(&threads[i], NULL, pearson_cor, (void *)arg); 
+      CPU_ZERO(&cpuset);
+      CPU_SET(core, &cpuset);
+      
+      if (pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset) != 0){
+        printf("Error on setaffinity\n");
+        return EXIT_FAILURE;
+      }else{
+        if(core == nprocs-1) core = 0;
+        else core++;
+      }
     }
 
     for (int i = 0; i < t; i++) {
       pthread_join(threads[i], NULL);
     }
-    end = clock();
-    elapsed = ((double)end - start) / CLOCKS_PER_SEC;
+    clock_gettime(CLOCK_MONOTONIC, &finish);
+    elapsed = (finish.tv_sec - start.tv_sec);
+    elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
     printf("Computation finished!\n");
     printf("Elapsed time: %.4f seconds\n", elapsed);
 
-    check_if_file_exists(&file, "log/results_threaded.txt");
+    check_if_file_exists(&file, "log/results_threaded_aff.txt");
 
     if (i < 3)
       fprintf(file, "%.6f, ", elapsed);
