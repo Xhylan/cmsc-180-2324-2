@@ -4,12 +4,12 @@
  * Written for CMSC 180 T-6L.
  */
 
+#include "dollentes_lab01.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
-#include "dollentes_lab01.h"
 
 double *pearson_cor(int **matrix, int *vector, int n);
 
@@ -46,9 +46,8 @@ int main(int argc, char *argv[]) {
   if (matrix == NULL) {
     return EXIT_FAILURE;
   }
-  
-  printf("\nInitialization done. (Completed in %.4f seconds)\n",
-           time_elapsed);
+
+  printf("\nInitialization done. (Completed in %.4f seconds)\n", time_elapsed);
 
   printf("\nInitializing vector...\n");
   start = clock();
@@ -58,12 +57,11 @@ int main(int argc, char *argv[]) {
   if (vector == NULL) {
     return EXIT_FAILURE;
   }
-  printf("\nInitialization done. (Completed in %.4f seconds)\n",
-           time_elapsed);
-  
+  printf("\nInitialization done. (Completed in %.4f seconds)\n", time_elapsed);
+
   for (int i = 0; i < 3; i++) {
     printf("\n\n[RUN #%d]\n", (i + 1));
-    
+
     printf("\nRunning function pearson_cor()...\n");
     start = clock();
     rho_vector = pearson_cor(matrix, vector, n);
@@ -78,7 +76,7 @@ int main(int argc, char *argv[]) {
     check_if_file_exists(&fptr, "log/results.txt");
     fprintf(fptr, "%.4f, ", time_elapsed);
     fclose(fptr);
-    
+
     free(rho_vector);
   }
 
@@ -87,6 +85,7 @@ int main(int argc, char *argv[]) {
   free(matrix);
   free(vector);
 
+  // print_results(rho_vector, n);
   check_if_file_exists(&fptr, "log/results.txt");
   fprintf(fptr, "\n");
   fclose(fptr);
@@ -118,7 +117,7 @@ double *pearson_cor(int **matrix, int *vector, int n) {
       xy += matrix[j][i] * vector[j];
     }
 
-    numerator = (double)(n * xy) - (y * x);
+    numerator = (double)((n * xy) - (y * x));
     denominator = sqrt(((n * x_sq) - (x * x)) * ((n * y_sq) - (y * y)));
 
     rho_vector[i] = (denominator == 0) ? NAN : numerator / denominator;

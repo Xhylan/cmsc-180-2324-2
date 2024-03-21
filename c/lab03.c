@@ -10,9 +10,9 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/sysinfo.h>
 #include <time.h>
 #include <unistd.h>
-#include <sys/sysinfo.h>
 
 #define TRUE 0xFF
 #define FALSE 0x00
@@ -31,6 +31,7 @@ int initialize_mutex();
 int destroy_mutex();
 void check_progress(int current, int total);
 void check_if_file_exists(FILE **file, char *filename);
+void transpose_matrix();
 
 /* collection of arguments to be passed to threads upon thread creation */
 typedef struct ARG_OBJECT {
@@ -51,7 +52,6 @@ void *pearson_cor(void *args) {
                       ? (start_index + arg->submatrix_size + remainder) - 1
                       : (start_index + arg->submatrix_size) - 1;
 
-  printf("Thread running on CPU %d\n", sched_getcpu());
   // preemptively compute summation of vector values
   summ_y = summ_y_sq = 0;
   for (int i = 0; i < SIZE; i++) {
@@ -62,7 +62,7 @@ void *pearson_cor(void *args) {
   for (int i = start_index; i < end_index; i++) {
     summ_x = summ_x_sq = summ_xy = 0;
 
-    if(IS_MATRIX_TRANSPOSED){
+    if (IS_MATRIX_TRANSPOSED) {
       for (int j = 0; j < SIZE; j++) {
         summ_x += MATRIX[i][j];
         summ_x_sq += (MATRIX[i][j] * MATRIX[i][j]);
@@ -70,14 +70,13 @@ void *pearson_cor(void *args) {
       }
     }
 
-    if(IS_MATRIX_TRANSPOSED == FALSE){
+    if (IS_MATRIX_TRANSPOSED == FALSE) {
       for (int j = 0; j < SIZE; j++) {
         summ_x += MATRIX[j][i];
         summ_x_sq += (MATRIX[j][i] * MATRIX[j][i]);
         summ_xy += (MATRIX[j][i] * VECTOR[j]);
-      } 
+      }
     }
-    
 
     numerator = (double)(SIZE * summ_xy) - (summ_y * summ_x);
     denominator = sqrt(((SIZE * summ_x_sq) - (summ_x * summ_x)) *
@@ -91,8 +90,8 @@ void *pearson_cor(void *args) {
 }
 
 /***
-* MAIN FUNCTION
-***/
+ * MAIN FUNCTION
+ ***/
 int main(int argc, char *argv[]) {
   int *thread_ids = NULL, nprocs = sysconf(_SC_NPROCESSORS_CONF);
   struct timespec start, finish;
@@ -102,9 +101,17 @@ int main(int argc, char *argv[]) {
   pthread_t *threads = NULL;
 
   /* handle user input depending on usage */
-  if (argc > 1) {
+  if (argc == 3) {
     SIZE = atoi(argv[1]);
     t = atoi(argv[2]);
+  }
+
+  if (argc == 2) {
+    SIZE = atoi(argv[1]);
+
+    printf("Enter t: ");
+    scanf("%d", &t);
+    getchar();
   }
 
   if (argc == 1) {
@@ -128,11 +135,6 @@ int main(int argc, char *argv[]) {
 
   srand(time(NULL));
 
-  check_if_file_exists(&file, "log/results_threaded_aff.txt");
-  fprintf(file, "SIZE: %d, THREADS: %d\n", SIZE, t);
-  fclose(file);
-
-
   printf("Initializing matrix...\n");
   clock_gettime(CLOCK_MONOTONIC, &start);
   MATRIX = initialize_matrix(1, 10);
@@ -152,87 +154,103 @@ int main(int argc, char *argv[]) {
   if (nprocs >= 4)
     nprocs = nprocs - 1;
 
-  while (t > 0){
-  /*
-   * Display progress of the program. 
-   * Shows the time taken for each runtime of the program.
-   */
-  fprintf(file, "SIZE: %d, THREADS: %d\n", SIZE, t);
-
-  for (int i = 1; i <= 3; i++) {
-    int core = 0;
-
-    printf("\n[[RUN %d]]\n", i);
-
-
-    printf("Initializing results vector...\n");
-    RHO_VECTOR = initialize_rho_vector();
-    printf("\nResults vector has been created and initialized.\n");
-
-    /* create thread array and thread_id array */
-    threads = (pthread_t *)malloc(t * sizeof(pthread_t));
-    thread_ids = (int *)malloc(t * sizeof(int));
-
-    if (initialize_mutex()) {
-      printf("ERROR: Mutex failed to initialize.\n");
-      return EXIT_FAILURE;
-    }
-
-    printf("Starting the computation...\n");
-    clock_gettime(CLOCK_MONOTONIC, &start);
-
-    for (int i = 0; i < t; i++) {
-      thread_ids[i] = i;
-      arguments *arg = (arguments *)malloc(sizeof(arguments));
-
-      arg->thread_index = thread_ids[i];
-      arg->submatrix_size = SIZE / t;
-      
-      pthread_create(&threads[i], NULL, pearson_cor, (void *)arg); 
-      CPU_ZERO(&cpuset);
-      CPU_SET(core, &cpuset);
-      
-      if (pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset) != 0){
-        printf("Error on setaffinity\n");
-        return EXIT_FAILURE;
-      }else{
-        if(core == nprocs-1) core = 0;
-        else core++;
-      }
-    }
-
-    for (int i = 0; i < t; i++) {
-      pthread_join(threads[i], NULL);
-    }
-    clock_gettime(CLOCK_MONOTONIC, &finish);
-    elapsed = (finish.tv_sec - start.tv_sec);
-    elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
-    printf("Computation finished!\n");
-    printf("Elapsed time: %.4f seconds\n", elapsed);
-
+  while (t > 0) {
+    /*
+     * Display progress of the program.
+     * Shows the time taken for each runtime of the program.
+     */
     check_if_file_exists(&file, "log/results_threaded_aff.txt");
-
-    if (i < 3)
-      fprintf(file, "%.6f, ", elapsed);
-
-    if (i == 3)
-      fprintf(file, "%.6f\n", elapsed);
-
+    fprintf(file, "SIZE: %d, THREADS: %d ROW MAJOR: ", SIZE, t);
+    if (IS_MATRIX_TRANSPOSED)
+      fprintf(file, "YES\n");
+    if (!IS_MATRIX_TRANSPOSED)
+      fprintf(file, "NO\n");
     fclose(file);
 
-    free(RHO_VECTOR);
-    free(threads);
-    free(thread_ids);
+    for (int i = 1; i <= 3; i++) {
+      int core = 0;
 
-    if (destroy_mutex()) {
-      printf("ERROR: Failed to destroy mutex");
-      return EXIT_FAILURE;
-    }
+      printf("\n[[RUN %d]]\n", i);
+
+      printf("Initializing results vector...\n");
+      RHO_VECTOR = initialize_rho_vector();
+      printf("\nResults vector has been created and initialized.\n");
+
+      /* create thread array and thread_id array */
+      threads = (pthread_t *)malloc(t * sizeof(pthread_t));
+      thread_ids = (int *)malloc(t * sizeof(int));
+
+      if (initialize_mutex()) {
+        printf("ERROR: Mutex failed to initialize.\n");
+        return EXIT_FAILURE;
+      }
+
+      printf("Starting the computation...\n");
+      clock_gettime(CLOCK_MONOTONIC, &start);
+
+      for (int i = 0; i < t; i++) {
+        thread_ids[i] = i;
+        arguments *arg = (arguments *)malloc(sizeof(arguments));
+
+        arg->thread_index = thread_ids[i];
+        arg->submatrix_size = SIZE / t;
+
+        pthread_create(&threads[i], NULL, pearson_cor, (void *)arg);
+        CPU_ZERO(&cpuset);
+        CPU_SET(core, &cpuset);
+
+        if (pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset) !=
+            0) {
+          printf("Error on setaffinity\n");
+          return EXIT_FAILURE;
+        } else {
+          if (core == nprocs - 1)
+            core = 0;
+          else
+            core++;
+        }
+      }
+
+      for (int i = 0; i < t; i++) {
+        pthread_join(threads[i], NULL);
+      }
+      clock_gettime(CLOCK_MONOTONIC, &finish);
+      elapsed = (finish.tv_sec - start.tv_sec);
+      elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
+      printf("Computation finished!\n");
+      printf("Elapsed time: %.4f seconds\n", elapsed);
+
+      check_if_file_exists(&file, "log/results_threaded_aff.txt");
+
+      if (i < 3)
+        fprintf(file, "%.6f, ", elapsed);
+
+      if (i == 3)
+        fprintf(file, "%.6f\n", elapsed);
+
+      fclose(file);
+
+      free(RHO_VECTOR);
+      free(threads);
+      free(thread_ids);
+
+      if (destroy_mutex()) {
+        printf("ERROR: Failed to destroy mutex");
+        return EXIT_FAILURE;
+      }
     }
 
     printf("Enter t: ");
     scanf("%d", &t);
     getchar();
+
+    if (t > 0) {
+      printf("Transpose matrix? (y/n) ");
+      char res = getchar();
+
+      if (tolower(res) == 'y')
+        transpose_matrix();
+    }
   }
 
   for (int j = 0; j < SIZE; j++)
@@ -243,8 +261,8 @@ int main(int argc, char *argv[]) {
 }
 
 /*
-* UTILITY FUNCTIONS
-*/
+ * UTILITY FUNCTIONS
+ */
 
 int **initialize_matrix(int min, int max) {
   int **matrix = (int **)malloc(SIZE * sizeof(int *));
@@ -252,15 +270,15 @@ int **initialize_matrix(int min, int max) {
   for (int i = 0; i < SIZE; i++)
     matrix[i] = (int *)malloc(SIZE * sizeof(int));
 
-  if (IS_MATRIX_TRANSPOSED){
+  if (IS_MATRIX_TRANSPOSED) {
     for (int i = 0; i < SIZE; i++) {
-     for (int j = 0; j < SIZE; j++) {
+      for (int j = 0; j < SIZE; j++) {
         matrix[j][i] = rand() % (min - max) + min;
         check_progress((i * SIZE) + j + 1, SIZE * SIZE);
       }
-    }  
+    }
   }
-  
+
   if (IS_MATRIX_TRANSPOSED == FALSE) {
     for (int i = 0; i < SIZE; i++) {
       for (int j = 0; j < SIZE; j++) {
@@ -321,4 +339,24 @@ void check_if_file_exists(FILE **file, char *filename) {
     *file = fopen(filename, "a");
   if (access(filename, F_OK) != 0)
     *file = fopen(filename, "w");
+}
+
+void transpose_matrix() {
+  int **old_matrix = MATRIX;
+
+  MATRIX = (int **)malloc(sizeof(int *) * SIZE);
+  for (int i = 0; i < SIZE; i++)
+    MATRIX[i] = (int *)malloc(sizeof(int *) * SIZE);
+
+  for (int i = 0; i < SIZE; i++)
+    for (int j = 0; j < SIZE; j++) {
+      MATRIX[i][j] = old_matrix[i][j];
+      check_progress((i * SIZE) + j + 1, SIZE * SIZE);
+    }
+
+  IS_MATRIX_TRANSPOSED = (IS_MATRIX_TRANSPOSED == TRUE) ? FALSE : TRUE;
+
+  for (int i = 0; i < SIZE; i++)
+    free(old_matrix[i]);
+  free(old_matrix);
 }
