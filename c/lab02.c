@@ -35,6 +35,7 @@ int initialize_mutex();
 int destroy_mutex();
 void check_progress(int current, int total);
 void check_if_file_exists(FILE **file, char *filename);
+void transpose_matrix();
 
 /* thread function */
 void *pearson_cor(void *args) {
@@ -214,6 +215,14 @@ int main(int argc, char *argv[]) {
     printf("Enter t: ");
     scanf("%d", &t);
     getchar();
+
+    if (t > 0) {
+      printf("Transpose matrix? (y/n) ");
+      char res = getchar();
+
+      if (tolower(res) == 'y')
+        transpose_matrix();
+    }
   }
 
   for (int j = 0; j < SIZE; j++)
@@ -302,4 +311,24 @@ void check_if_file_exists(FILE **file, char *filename) {
     *file = fopen(filename, "a");
   if (access(filename, F_OK) != 0)
     *file = fopen(filename, "w");
+}
+
+void transpose_matrix() {
+  int **old_matrix = MATRIX;
+
+  MATRIX = (int **)malloc(sizeof(int *) * SIZE);
+  for (int i = 0; i < SIZE; i++)
+    MATRIX[i] = (int *)malloc(sizeof(int *) * SIZE);
+
+  for (int i = 0; i < SIZE; i++)
+    for (int j = 0; j < SIZE; j++) {
+      MATRIX[i][j] = old_matrix[i][j];
+      check_progress((i * SIZE) + j + 1, SIZE * SIZE);
+    }
+
+  IS_MATRIX_TRANSPOSED = (IS_MATRIX_TRANSPOSED == TRUE) ? FALSE : TRUE;
+
+  for (int i = 0; i < SIZE; i++)
+    free(old_matrix[i]);
+  free(old_matrix);
 }
