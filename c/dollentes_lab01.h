@@ -24,7 +24,7 @@ int **init_matrix(int n, int min, int max) {
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
       matrix[i][j] = (rand() % (max - min)) + min;
-      track_progress(((i * n) + j + 1), n * n);
+      //track_progress(((i * n) + j + 1), n * n);
     }
   }
 
@@ -36,7 +36,7 @@ int *init_vector(int n, int min, int max) {
 
   for (int i = 0; i < n; i++) {
     vector[i] = (rand() % (max - min)) + min;
-    track_progress(i + 1, n);
+    //track_progress(i + 1, n);
   }
 
   return vector;

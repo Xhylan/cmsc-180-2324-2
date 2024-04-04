@@ -121,7 +121,7 @@ double *pearson_cor(int **matrix, int *vector, int n) {
     denominator = sqrt(((n * x_sq) - (x * x)) * ((n * y_sq) - (y * y)));
 
     rho_vector[i] = (denominator == 0) ? NAN : numerator / denominator;
-    track_progress(i + 1, n);
+    //track_progress(i + 1, n);
   }
 
   return rho_vector;

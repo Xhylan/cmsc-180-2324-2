@@ -274,7 +274,6 @@ int **initialize_matrix(int min, int max) {
     for (int i = 0; i < SIZE; i++) {
       for (int j = 0; j < SIZE; j++) {
         matrix[j][i] = rand() % (min - max) + min;
-        check_progress((i * SIZE) + j + 1, SIZE * SIZE);
       }
     }
   }
@@ -283,7 +282,6 @@ int **initialize_matrix(int min, int max) {
     for (int i = 0; i < SIZE; i++) {
       for (int j = 0; j < SIZE; j++) {
         matrix[i][j] = rand() % (min - max) + min;
-        check_progress((i * SIZE) + j + 1, SIZE * SIZE);
       }
     }
   }
@@ -296,7 +294,6 @@ int *initialize_vector(int min, int max) {
 
   for (int i = 0; i < SIZE; i++) {
     vector[i] = (rand() % (min - max)) + min;
-    check_progress(i + 1, SIZE);
   }
 
   return vector;
@@ -307,7 +304,6 @@ double *initialize_rho_vector() {
 
   for (int i = 0; i < SIZE; i++) {
     vector[i] = 0;
-    check_progress(i + 1, SIZE);
   }
 
   return vector;
@@ -351,7 +347,6 @@ void transpose_matrix() {
   for (int i = 0; i < SIZE; i++)
     for (int j = 0; j < SIZE; j++) {
       MATRIX[i][j] = old_matrix[i][j];
-      check_progress((i * SIZE) + j + 1, SIZE * SIZE);
     }
 
   IS_MATRIX_TRANSPOSED = (IS_MATRIX_TRANSPOSED == TRUE) ? FALSE : TRUE;
