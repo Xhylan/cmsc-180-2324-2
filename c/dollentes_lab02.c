@@ -124,12 +124,7 @@ int main(int argc, char *argv[]) {
     IS_MATRIX_TRANSPOSED = FALSE;
 
   srand(time(NULL));
-
-  check_if_file_exists(&file, "log/results_threaded.txt");
-  fprintf(file, "SIZE: %d, THREADS: %d\n", SIZE, t);
-  fclose(file);
-
-
+  
   printf("Initializing matrix...\n");
   clock_gettime(CLOCK_MONOTONIC, &start);
   MATRIX = initialize_matrix(1, 10);
@@ -151,7 +146,10 @@ int main(int argc, char *argv[]) {
    * Display progress of the program. 
    * Shows the time taken for each runtime of the program.
    */
+  check_if_file_exists(&file, "log/results_threaded.txt");
   fprintf(file, "SIZE: %d, THREADS: %d\n", SIZE, t);
+  fclose(file);
+
 
   for (int i = 1; i <= 3; i++) {
     printf("\n[[RUN %d]]\n", i);
@@ -246,7 +244,6 @@ int **initialize_matrix(int min, int max) {
     for (int i = 0; i < SIZE; i++) {
      for (int j = 0; j < SIZE; j++) {
         matrix[j][i] = rand() % (min - max) + min;
-        //check_progress((i * SIZE) + j + 1, SIZE * SIZE);
       }
     }  
   }
@@ -255,7 +252,6 @@ int **initialize_matrix(int min, int max) {
     for (int i = 0; i < SIZE; i++) {
       for (int j = 0; j < SIZE; j++) {
         matrix[i][j] = rand() % (min - max) + min;
-        //check_progress((i * SIZE) + j + 1, SIZE * SIZE);
       }
     }
   }
@@ -268,7 +264,6 @@ int *initialize_vector(int min, int max) {
 
   for (int i = 0; i < SIZE; i++) {
     vector[i] = (rand() % (min - max)) + min;
-    //check_progress(i + 1, SIZE);
   }
 
   return vector;
@@ -279,7 +274,6 @@ double *initialize_rho_vector() {
 
   for (int i = 0; i < SIZE; i++) {
     vector[i] = 0;
-    //check_progress(i + 1, SIZE);
   }
 
   return vector;
@@ -323,7 +317,6 @@ void transpose_matrix() {
   for (int i = 0; i < SIZE; i++)
     for (int j = 0; j < SIZE; j++) {
       MATRIX[i][j] = old_matrix[i][j];
-      //check_progress((i * SIZE) + j + 1, SIZE * SIZE);
     }
 
   IS_MATRIX_TRANSPOSED = (IS_MATRIX_TRANSPOSED == TRUE) ? FALSE : TRUE;
