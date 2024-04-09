@@ -1,0 +1,22 @@
+METHODOLOGY:
+
+The experiment investigated the performance of a threaded, core-affine implementation of the Pearson Correlation Coefficient between a matrix and a vector. It is compared to a non-core-affine threaded version of the same program, as described in the previous experiment. Both threaded plementations perform the following:
+
+Both versions exploit thread-level parallelism to distribute workload amongst multiple threads.
+
+Hardware and Operating System: This study is conducted on a personal computer with the following specifications:
+
+1. CPU: [Insert CPU here]
+2. Cores: 12
+3. RAM Capacity: 16GB
+4. Operating System: Windows 11
+
+Programming and Testing Environment: The developed program is written in C. Because Windows 11 does not directly support C compilers, the experiment employed Cygwin to provide a Unix-like environment and C development capabilities. Cygwin offers a POSIX-compatible API layer, enabling the compilation and execution of C code on a Windows system. 
+
+Implementation: The program asks the user for the values of n and t—which are the input sizes and the number of threads, respectively. Once the values are given, the program will create a matrix and a vector of sizes n×n and n respectively. The matrix and the vector are declared as global variables in both implementations.
+
+The program creates an array of t threads after dynamically allocating memory for the matrix and the vector. It creates a collection of variables to be passed to the threads before creating each thread. This collection of variables are the arguments each thread requires. Once the thread is created, the main program will immediately set the thread's core affinity through pthread_setaffinity(). pthread_setaffinity() will return zero if the main program successfully sets the thread's core affinity, and will return a non-zero value otherwise. Lastly, all threads are joined together once they are done. 
+
+The matrix is subdivided amongst the threads through computing for the start index and the end index. Given the thread's index issued upon thread creation, the thread uses it to determine where the thread should start and stop computing. After obtaining the start and end index, the thread will then compute for the summation of all the vector elements and the squared vector elements. These values remain the same throughout the entire process; therefore, the threads compute for it before computing for each rho value. The threads will then compute for the other values from the starting index to the end index, writing into the results array after computing for the rho values. Mutexes are used by threads in order to ensure that the values are properly stored. 
+
+Evaluation Methods: The performance of the core-affine implementation is evaluated through execution times. Matrices and vectors of corresponding sizes were randomly generated. The program runs the entire process three times on the same matrix and vectors, and records the execution time of each run into a text file. An average running time is computed for t threads, and a graphing tool is used to represent the obtained data.  
