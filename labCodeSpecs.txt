@@ -1,0 +1,9 @@
+Program Specifications:
+
+- create an open socket for sending and receiving data
+- read from a config file a list of IP addresses and corresponding ports to communicate to
+- several instances of the program over several terminals/PCs
+    - include IP Addresses and Ports (either on the same PC, diff terminals/diff PCs and diff terminals)
+- user defines own port
+- elect one instance as master and the rest as slave
+- master creates matrix and distributes submatrices to slaves
