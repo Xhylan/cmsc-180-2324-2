@@ -47,11 +47,16 @@ int main(int argc, char *argv[]){
 
         printf("Server listening on port %d\n", ntohs(server.sin_port));
     
-        int new_socket = accept(sockfd, (struct sockaddr*) &client, &client_addr_size);
+        while (1) {
 
-        if (new_socket < 0){
-            perror("accept()");
-            return EXIT_FAILURE;
+            int new_socket = accept(sockfd, (struct sockaddr*) &client, &client_addr_size);
+
+            if (new_socket < 0){
+                perror("accept()");
+                continue;
+            }
+
+            printf("Someone connected!\n");
         }
 
     }
