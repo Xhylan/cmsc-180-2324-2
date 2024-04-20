@@ -4,11 +4,15 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "lab04.h"
+
 #define MASTER 0
 #define SLAVE 1
 
 int main(int argc, char *argv[]){
     int n, p, s, sockfd;
+    int ** matrix, * vector;
+    double * rho_vector;
     struct sockaddr_in server, client;
     socklen_t client_addr_size;
 
@@ -23,6 +27,10 @@ int main(int argc, char *argv[]){
     printf("Status (0 - Master, 1 - Slave): ");
     scanf("%d", &s);
     getchar();
+
+    matrix = initialize_matrix(n);
+    vector = initialize_vector(n);
+    rho_vector = initialize_rho_vector(n);
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd < 0){
@@ -48,15 +56,23 @@ int main(int argc, char *argv[]){
         printf("Server listening on port %d\n", ntohs(server.sin_port));
     
         while (1) {
-
             int new_socket = accept(sockfd, (struct sockaddr*) &client, &client_addr_size);
+            struct sockaddr_in client;
+            socklen_t client_addr_size = sizeof(client);
 
             if (new_socket < 0){
                 perror("accept()");
                 continue;
             }
 
-            printf("Someone connected!\n");
+            getpeername(new_socket, (struct sockaddr *) &client, &client_addr_size);
+
+            char client_IP[INET_ADDRSTRLEN]; 
+            inet_ntop(AF_INET, &(client.sin_addr), client_IP, client_addr_size);
+
+            int client_port = ntohs(client.sin_port);
+
+            printf("Client connected from: %s:%d\n", client_IP, client_port);
         }
 
     }
