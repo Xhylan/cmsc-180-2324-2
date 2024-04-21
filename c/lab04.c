@@ -119,6 +119,12 @@ int main(int argc, char *argv[]){
             clients_connected++;
         }
 
+        /*
+            *   TODO: Slice and distribute matrix to clients connecting.
+            *   One to many broadcast, log(p) implementation
+            *
+        */
+
     }
 
     if (s == SLAVE){
@@ -143,6 +149,14 @@ int main(int argc, char *argv[]){
             perror("connect()");
             return 1;
         }
+
+        /*
+            *
+            *   TODO: Distribute matrix to clients.
+            *   Use server.cfg for the network details.
+            *   One to one broadcast, log(p) implementation
+            * 
+        */
 
         printf("Connected");
     }
