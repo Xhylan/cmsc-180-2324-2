@@ -69,6 +69,7 @@ int main(int argc, char *argv[]){
             token = strtok(NULL, ":");
             newAddress -> port = atoi(token);
             token = strtok(NULL, ":");
+            newAddress -> next = NULL;
             
             if (head == NULL) head = newAddress;
             if (head != NULL) {
