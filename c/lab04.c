@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "lab04.h"
@@ -44,9 +45,10 @@ int main(int argc, char *argv[]){
     }
 
     if (s == MASTER) {
-        int clients_connected = 0;
+        int expected_clients = 0, clients_connected = 0;
         net_address * head = NULL;
 
+        srand(time(NULL));
         matrix = initialize_matrix(n);
         vector = initialize_vector(n);
         rho_vector = initialize_rho_vector(n);
@@ -66,21 +68,26 @@ int main(int argc, char *argv[]){
 
             token = strtok(netAddressString, ":");
             newAddress -> IP_addr = token;
+            printf("%s ", token);
             token = strtok(NULL, ":");
             newAddress -> port = atoi(token);
-            token = strtok(NULL, ":");
+            printf("%s ", token);
             newAddress -> next = NULL;
             
-            if (head == NULL) head = newAddress;
             if (head != NULL) {
-                net_address * temp = NULL;
-
+                printf("not empty!\n");
+                net_address * temp = head;
                 while (temp -> next != NULL) temp = temp -> next;
-
                 temp -> next = newAddress;
             }
-        }
 
+            if (head == NULL) {
+                printf("Empty!\n");
+                head = newAddress;
+            }
+
+            expected_clients++;
+        }
 
         server.sin_family = AF_INET;
         server.sin_addr.s_addr = INADDR_ANY;
@@ -98,7 +105,7 @@ int main(int argc, char *argv[]){
 
         printf("Server listening on port %d\n", ntohs(server.sin_port));
     
-        while (1) {
+        while (clients_connected < expected_clients) {
             int new_socket = accept(sockfd, (struct sockaddr*) &client, &client_addr_size);
             struct sockaddr_in client;
             socklen_t client_addr_size = sizeof(client);
@@ -124,7 +131,8 @@ int main(int argc, char *argv[]){
             *   One to many broadcast, log(p) implementation
             *
         */
-
+       
+       int *** submatrices = divide_into_submatrices(matrix, n, clients_connected);
     }
 
     if (s == SLAVE){
