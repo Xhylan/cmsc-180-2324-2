@@ -21,8 +21,9 @@ typedef struct ADDR_COLL{
 int main(int argc, char *argv[]){
     int n, p, s, sockfd;
     int ** matrix, * vector;
-    double * rho_vector;
+    double * rho_vector, elapsed;
     struct sockaddr_in server, client;
+    struct timespec start, end;
     socklen_t client_addr_size;
     FILE * fd;
 
