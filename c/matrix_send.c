@@ -1,22 +1,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+
+#include "lab04.h"
 
 #define PORT 8080
 #define MASTER 0
 #define SLAVE 1
 
 int main(){
+    struct sockaddr_in server_address, client_address;
     int status, size;
-    int matrix[2][2] = {{1,2},{3,4}};
+    int ** matrix;
     int server_socket, client_socket;
     int recv_val, send_val;
-    int addrlen = sizeof(server_socket);
-    struct sockaddr_in server_address, client_address;
+    int addrlen = sizeof(server_address);
 
     printf("Status: (Master - 0; Slave - 1) ");
     scanf("%d", &status);
@@ -28,6 +31,12 @@ int main(){
             perror("Socket creation failed");
             return EXIT_FAILURE; 
         }
+
+        scanf("%d", &size);
+        getchar();
+
+        srand(time(NULL));
+        matrix = initialize_matrix(size);
 
         memset(&server_address, 0, sizeof(server_address));
         server_address.sin_family = AF_INET;
@@ -50,7 +59,90 @@ int main(){
                 perror("Connection failed!");
                 continue;
             }
+            printf("Client connected!\n");
+
+            int sent_bytes = send(client_socket, &size, sizeof(size), 0);
+            if(sent_bytes != sizeof(size)){
+                perror("Failed!\n");
+                close(client_socket);
+                continue;
+            }
+
+            for (int i = 0; i < size; i++){
+                for (int j = 0; j < size; j++){
+                    sent_bytes = send(client_socket, &matrix[i][j], sizeof(matrix[i][j]), 0);
+                    if (sent_bytes != sizeof(matrix[i][j])){
+                        perror("Send matrix data failed!");
+                        close(client_socket);
+                        break;
+                    }                
+                }
+            }
+
+            close(client_socket);
         }
+
+        close(server_socket);
     }
 
+    if (status == SLAVE) {
+        client_socket = socket(AF_INET, SOCK_STREAM, 0);
+        if (client_socket == -1) {
+            perror("Failed to create socket!");
+            return EXIT_FAILURE;
+        }
+
+        memset(&server_address, 0, addrlen);
+        server_address.sin_family = AF_INET;
+        server_address.sin_addr.s_addr = inet_addr("127.0.0.1");
+        server_address.sin_port = htons(PORT);
+
+        if (connect(client_socket, (struct sockaddr*)&server_address, addrlen) == -1) {
+            perror("Failed to connect");
+            return EXIT_FAILURE;
+        }
+
+        printf("Connected successfully!");
+
+        int received_bytes = recv(client_socket, &size, sizeof(size), 0);
+        if (received_bytes !=  sizeof(size)){
+            perror("Failed to receive");
+            close(client_socket);
+            return EXIT_FAILURE;
+        }
+
+        printf("Matrix size: %d\n", size);
+
+        int** matrix = (int**)malloc(size * sizeof(int*));
+         for (int i = 0; i < size; i++) {
+            matrix[i] = (int*)malloc(size * sizeof(int));
+        }
+
+        for (int i = 0; i < size; i++){
+            for (int j = 0; j < size; j++) {
+                received_bytes = recv(client_socket, &matrix[i][j], sizeof(matrix[i][j]), 0);
+                if (received_bytes != sizeof(matrix[i][j])){
+                    perror("Failed to receive matrix data!");
+                    close(client_socket);
+
+                    for (int k = 0; k < size; k++) free(matrix[k]);
+                    free(matrix);
+                    return EXIT_FAILURE;
+                }
+            }
+        }
+
+        printf("Matrix Received: \n");
+        for (int i = 0; i < size; i++){
+            for (int j = 0; j < size; j++){
+                printf("%d ", matrix[i][j]);
+            }
+            printf("\n");
+        }
+
+        for (int k = 0; k < size; k++) free(matrix[k]);
+        free(matrix);
+
+        close(client_socket);
+    }
 }
