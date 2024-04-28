@@ -53,31 +53,19 @@ int main(){
             return EXIT_FAILURE;
         }
 
-        while(1){
-            client_socket = accept(server_socket, (struct sockaddr*) &client_socket, (socklen_t*)&addrlen);
-            if(client_socket == -1){
-                perror("Connection failed!");
-                continue;
-            }
-            printf("Client connected!\n");
+        client_socket = accept(server_socket, (struct sockaddr*) &client_socket, (socklen_t*)&addrlen);
+        if(client_socket == -1){
+            perror("Connection failed!");
+            continue;
+        }
+        printf("Client connected!\n");
 
-            int sent_bytes = send(client_socket, &size, sizeof(size), 0);
-            if(sent_bytes != sizeof(size)){
-                perror("Failed!\n");
-                close(client_socket);
-                continue;
-            }
-
-            for (int i = 0; i < size; i++){
-                for (int j = 0; j < size; j++){
-                    sent_bytes = send(client_socket, &matrix[i][j], sizeof(matrix[i][j]), 0);
-                    if (sent_bytes != sizeof(matrix[i][j])){
-                        perror("Send matrix data failed!");
-                        close(client_socket);
-                        break;
-                    }                
-                }
-            }
+        int sent_bytes = send(client_socket, &size, sizeof(size), 0);
+        if(sent_bytes != sizeof(size)){
+            perror("Failed!\n");
+            close(client_socket);
+            continue;
+        }
 
             close(client_socket);
         }
