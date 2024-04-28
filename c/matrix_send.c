@@ -53,23 +53,36 @@ int main(){
             return EXIT_FAILURE;
         }
 
+        printf("Size to be sent: %d\n", size);
+        int size_to_send = htonl(size);
+
         client_socket = accept(server_socket, (struct sockaddr*) &client_socket, (socklen_t*)&addrlen);
         if(client_socket == -1){
             perror("Connection failed!");
-            continue;
+            return EXIT_FAILURE;
         }
         printf("Client connected!\n");
 
-        int sent_bytes = send(client_socket, &size, sizeof(size), 0);
-        if(sent_bytes != sizeof(size)){
-            perror("Failed!\n");
+        int sent_bytes = send(client_socket, &size_to_send, sizeof(size_to_send), 0);
+        if(sent_bytes != sizeof(size_to_send)){
+            perror("Failed! (size) ");
             close(client_socket);
-            continue;
+            return EXIT_FAILURE;
         }
 
-            close(client_socket);
+        for(int i = 0; i < size; i++){
+            for(int j = 0; j < size; j++){
+                int to_send = htonl(matrix[i][j]);
+                sent_bytes = send(client_socket, &to_send, sizeof(to_send), 0);
+                if(sent_bytes != sizeof(to_send)){
+                    perror("Failed! (matrix) ");
+                    close(client_socket);
+                    return EXIT_FAILURE;
+                }
+            }
         }
 
+        close(client_socket);
         close(server_socket);
     }
 
@@ -99,6 +112,7 @@ int main(){
             return EXIT_FAILURE;
         }
 
+        size = ntohl(size);
         printf("Matrix size: %d\n", size);
 
         int** matrix = (int**)malloc(size * sizeof(int*));
@@ -108,25 +122,26 @@ int main(){
 
         for (int i = 0; i < size; i++){
             for (int j = 0; j < size; j++) {
-                received_bytes = recv(client_socket, &matrix[i][j], sizeof(matrix[i][j]), 0);
+                int received;
+                received_bytes = recv(client_socket, &received, sizeof(received), 0);
                 if (received_bytes != sizeof(matrix[i][j])){
                     perror("Failed to receive matrix data!");
                     close(client_socket);
-
                     for (int k = 0; k < size; k++) free(matrix[k]);
                     free(matrix);
-                    return EXIT_FAILURE;
+                    exit(EXIT_FAILURE);
                 }
+                matrix[i][j] = ntohl(received);
             }
         }
 
-        printf("Matrix Received: \n");
-        for (int i = 0; i < size; i++){
-            for (int j = 0; j < size; j++){
-                printf("%d ", matrix[i][j]);
-            }
-            printf("\n");
-        }
+        // printf("Matrix Received: \n");
+        // for (int i = 0; i < size; i++){
+        //     for (int j = 0; j < size; j++){
+        //         printf("%d ", matrix[i][j]);
+        //     }
+        //     printf("\n");
+        // }
 
         for (int k = 0; k < size; k++) free(matrix[k]);
         free(matrix);
