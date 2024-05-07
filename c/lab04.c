@@ -13,29 +13,10 @@
 #define TRUE 10
 #define FALSE 11
 
-typedef struct ADDR_COLL{
-    char * IP_addr;
-    int port;
-    struct ADDR_COLL * next;
-}net_address;
 
-net_address * head = NULL;
 
-int is_address_found(char* IP_addr, int port){
-    net_address *temp = head;
-
-    while(temp != NULL){
-        if(strcmp(IP_addr, head -> IP_addr) == 0){
-            if(temp -> port == port) return TRUE;
-        } 
-
-        temp = temp -> next;
-    }
-    
-    return FALSE;
-}
-
-void send_over_socket();
+void send_over_socket(int sockfd, int expected_client, int n, int *sockets, 
+                        int * vector, int *** submatrices);
 void send_over_socket_threaded();
 void send_over_socket_thread_affine();
 
@@ -60,6 +41,7 @@ int main(int argc, char *argv[]){
     scanf("%d", &s);
     getchar();
 
+    //Define a socket.
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sockfd < 0){
         perror("[-] Error creating socket ");
@@ -72,8 +54,15 @@ int main(int argc, char *argv[]){
         exit(EXIT_FAILURE);
     }
 
+
+
+
     if (s == MASTER) {
-        int expected_clients = 0, clients_connected = 0, size;
+        int expected_clients = 0, connected = 0, size, choice, client_port;
+        int *sockets;
+        char netAddressString[256], client_IP[INET_ADDRSTRLEN]; ;
+        char *token;
+        net_address * head = NULL;
 
         printf("[o] Expected connections: ");
         scanf("%d", &expected_clients);
@@ -91,9 +80,9 @@ int main(int argc, char *argv[]){
             return EXIT_FAILURE;
         }
 
-        char netAddressString[256];
-        char *token;
-
+        /*
+         * Obtain all addresses from server.cfg.
+         */
         while (fgets(netAddressString, 256, fd)){
             net_address * newAddress = (net_address *) malloc(sizeof(net_address));
 
@@ -114,73 +103,81 @@ int main(int argc, char *argv[]){
             }
         }
 
+
+        /*
+         * Bind socket to specified server address.
+         */
         server.sin_family = AF_INET;
         server.sin_addr.s_addr = INADDR_ANY;
         server.sin_port = htons(p); 
 
         if (bind(sockfd, (struct sockaddr*)&server, sizeof(server)) == -1) {
-            perror("bind");
+            perror("[-] Error binding to address!");
             return 1;
         }
 
         if (listen(sockfd, 5) == -1) {
-            perror("listen");
+            perror("[-] Can't listen to specified port!");
             return 1;
         }
 
         printf("[+] Server listening on port %d\n", ntohs(server.sin_port));
-    
-        while (clients_connected < expected_clients) {
-            int bytes_to_send, sent_bytes, size;
-            int new_socket = accept(sockfd, (struct sockaddr*) &client, &client_addr_size);
+
+        sockets = (int*) malloc(expected_clients * sizeof(int));
+
+        while(connected < expected_clients){
             struct sockaddr_in client;
             socklen_t client_addr_size = sizeof(client);
 
-            if (new_socket < 0){
-                perror("accept()");
+            sockets[connected] = accept(sockfd, (struct sockaddr*) &client, &client_addr_size);
+            if (sockets[connected] < 0) {
+                perror("[-] Failed to accept client connection!");
                 continue;
-            }
+            }   
 
-            getpeername(new_socket, (struct sockaddr *) &client, &client_addr_size);
-
-            char client_IP[INET_ADDRSTRLEN]; 
+            getpeername(sockets[connected], (struct sockaddr *) &client, &client_addr_size);
             inet_ntop(AF_INET, &(client.sin_addr), client_IP, client_addr_size);
-            int client_port = ntohs(client.sin_port);
+            client_port = ntohs(client.sin_port);
 
-            printf("Client connected from: %s:%d\n", client_IP, client_port);
-
-            if(is_address_found(client_IP, client_port) == FALSE){
+            if (is_address_found(client_IP, client_port, head) == FALSE){
                 printf("[-] The server cannot accept connections from this address.\n ");
-                close(new_socket);
+                close(sockets[connected]);
                 continue;
             }
 
-            size = n/expected_clients;
-            bytes_to_send = htonl(size);
-            sent_bytes = send(new_socket, &bytes_to_send, sizeof(bytes_to_send), 0);
-            if(sent_bytes != sizeof(bytes_to_send)){
-                perror("[-] Failed to send data: ");
-                exit(EXIT_FAILURE);
-            }
-
-            for(int i = 0; i < n; i++){
-                for(int j = 0; j < size; j++){
-                    bytes_to_send = htonl(submatrices[clients_connected][i][j]);
-                    sent_bytes = send(new_socket, &bytes_to_send, sizeof(bytes_to_send), 0);
-                    if(sent_bytes != sizeof(bytes_to_send)){
-                        perror("[-] Failed to send data: ");
-                        exit(EXIT_FAILURE);
-                    }
-                }
-            }
-
-            clients_connected++;
-        }
+        connected++;
     }
+
+        choice = printMenu();
+        switch(choice){
+            case 1: send_over_socket(sockfd, expected_clients, n, sockets, vector, submatrices);
+                    break;
+            case 2: 
+                    break;
+            case 3:
+                    break;
+            case 0:
+                    break;
+            default:
+                    printf("[-] Invalid option!");
+                    break;
+        }
+
+        for(int i = 0; i < expected_clients; i++){
+            close(sockets[i]);
+        }
+
+        free(sockets);
+    }
+
+
+
 
     if (s == SLAVE){
         int bytes_to_recv, recv_bytes, cols;
-        int **submatrix;
+        int *vector, **submatrix;
+        char *token, netAddressString[256];
+        net_address * server_addr;
 
         check_if_file_exists(&fd, "server.cfg");
         struct sockaddr_in client_addr;
@@ -195,9 +192,21 @@ int main(int argc, char *argv[]){
             printf("Client socket bound to port %d\n", p);
         }
 
+        fgets(netAddressString, 256, fd);
+        server_addr = (net_address *) malloc(sizeof(net_address));
+        token = strtok(netAddressString, ":");
+        server_addr -> IP_addr = token;
+        token = strtok(NULL, ":");
+        server_addr -> port = atoi(token);
+        server_addr -> next = NULL;
+
         server.sin_family = AF_INET;
-        server.sin_addr.s_addr = inet_addr("127.0.0.1");
-        server.sin_port = htons(8000); 
+        server.sin_addr.s_addr = inet_addr(server_addr -> IP_addr);
+        server.sin_port = htons(server_addr -> port); 
+
+        // server.sin_family = AF_INET;
+        // server.sin_addr.s_addr = inet_addr("127.0.0.1");
+        // server.sin_port = htons(8000); 
 
         if (connect(sockfd, (struct sockaddr*)&server, sizeof(server)) == -1) {
             perror("connect()");
@@ -215,7 +224,9 @@ int main(int argc, char *argv[]){
     
         printf("[+] Received: %d", cols); 
 
+        vector = (int *) malloc(sizeof(int) * n);
         submatrix = init_empty_matrix(n, cols);
+
         for(int i = 0; i < n; i++){
             for(int j = 0; j < cols; j++){
                 recv_bytes = recv(sockfd, &bytes_to_recv, sizeof(bytes_to_recv), 0);
@@ -227,14 +238,54 @@ int main(int argc, char *argv[]){
             }
         }
 
+        for(int i = 0; i < n; i++){
+            recv_bytes = recv(sockfd, &bytes_to_recv, sizeof(bytes_to_recv), 0);
+            if(recv_bytes != sizeof(bytes_to_recv)){
+                perror("[-] Failed to receive data: ");
+                exit(EXIT_FAILURE);
+            }
+            vector[i] = ntohl(bytes_to_recv);
+        }
+
     }
 
     close(sockfd);
     return EXIT_SUCCESS;
 }
 
-void send_over_socket(){
+void send_over_socket(int sockfd, int expected_client, int n, int * sockets, int * vector, int *** submatrices){
+    int size;
+    int to_send, sent_bytes;
 
+    for (int i = 0; i < expected_client; i++){
+        size = n/expected_client;
+        to_send = htonl(size);
+        sent_bytes = send(sockets[i], &to_send, sizeof(to_send), 0);
+        if(sent_bytes != sizeof(to_send)){
+            perror("[-] Failed to send data: ");
+            exit(EXIT_FAILURE);
+        }
+
+        for (int j = 0; j < n; j++) {
+            for (int k = 0; k < size; k++) {
+                to_send = htonl(submatrices[i][j][k]);
+                sent_bytes = send(sockets[i], &to_send, sizeof(to_send), 0);
+                if(sent_bytes != sizeof(to_send)){
+                    perror("[-] Failed to send data: ");
+                    exit(EXIT_FAILURE);
+                }
+            }
+        }
+
+        for (int j = 0; j < n; j++) {
+            to_send = htonl(vector[j]);
+            sent_bytes = send(sockets[i], &to_send, sizeof(to_send), 0);
+            if(sent_bytes != sizeof(to_send)){
+                perror("[-] Failed to send data: ");
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
 }
 
 void send_over_socket_threaded(){

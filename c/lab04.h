@@ -1,3 +1,12 @@
+#define TRUE 10
+#define FALSE 11
+
+typedef struct ADDR_COLL{
+    char * IP_addr;
+    int port;
+    struct ADDR_COLL * next;
+}net_address;
+
 int ** initialize_matrix(int size){
     int ** matrix = (int **) malloc(sizeof(int *) * size);
 
@@ -56,6 +65,34 @@ int *** divide_into_submatrices(int ** matrix, int size, int div){
     }
 
     return submatrices;
+}
+
+int is_address_found(char* IP_addr, int port, net_address *head){
+    net_address *temp = head;
+
+    while(temp != NULL){
+        if(strcmp(IP_addr, head -> IP_addr) == 0){
+            if(temp -> port == port) return TRUE;
+        } 
+
+        temp = temp -> next;
+    }
+    
+    return FALSE;
+}
+
+int printMenu(){
+    int choice;
+
+    printf("Choose how to send:\n");
+    printf("[1] Send normally.\n");
+    printf("[2] Send with threads.\n");
+    printf("[3] Send with core-affine threads.\n");
+    printf("[0] Exit.\n");
+    scanf("%d", &choice);
+    getchar();
+
+    return choice;
 }
 
 double * initialize_rho_vector(int size){
