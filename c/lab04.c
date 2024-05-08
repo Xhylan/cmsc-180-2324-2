@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <arpa/inet.h>
 #include <ctype.h>
 #include <pthread.h>
@@ -5,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/sysinfo.h>
 #include <time.h>
 #include <unistd.h>
 #include "lab04.h"
@@ -82,16 +85,17 @@ void *send_data(void *args){
 
 void send_over_socket(int expected_client, int n, int *sockets, 
                         int * vector, int *** submatrices);
-void send_over_socket_threaded();
-void send_over_socket_thread_affine();
+void send_over_socket_thread_affine(int expected_client, int n, int *sockets,
+                                    int * vector, int *** submatrices);
 
 int main(int argc, char *argv[]){
-    int n, p, s, opt = 1;
+    int n, p, s, opt = 1; 
     int ** matrix, * vector, ***submatrices;
     double * rho_vector, elapsed;
     struct sockaddr_in server, client;
     struct timespec start, end;
     socklen_t client_addr_size;
+    cpu_set_t cpuset;
     FILE * fd;
 
     printf("[o] N: ");
@@ -378,7 +382,9 @@ void send_over_socket(int expected_client, int n, int * sockets, int * vector, i
 
 
 void send_over_socket_thread_affine(int expected_client, int n, int * sockets, int * vector, int *** submatrices){
+    int core = 0, nprocs = sysconf(_SC_NPROCESSORS_CONF);
     pthread_t *threads = NULL;
+    cpu_set_t cpuset;
     threads = (pthread_t *) malloc(sizeof(pthread_t) * expected_client);
 
     for (int i = 0; i < expected_client; i++){
@@ -391,6 +397,17 @@ void send_over_socket_thread_affine(int expected_client, int n, int * sockets, i
         args -> vector = vector;
 
         pthread_create(&threads[i], NULL, send_data, (void*) args);
+
+        CPU_ZERO(&cpuset);
+        CPU_SET(core, &cpuset);
+
+        if (pthread_setaffinity_np(threads[i], sizeof(cpu_set_t), &cpuset) != 0){
+            perror("[-] Unable to set core affinity: ");
+            exit(EXIT_FAILURE);
+        } else {
+            if (core == nprocs-1) core = 0;
+            else core++;
+        }
     }
 
     for (int i = 0; i < expected_client; i++){
