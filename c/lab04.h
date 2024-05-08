@@ -7,6 +7,14 @@ typedef struct ADDR_COLL{
     struct ADDR_COLL * next;
 }net_address;
 
+typedef struct ARG_STRUCT{
+    int socket;
+    int n;
+    int expected_client;
+    int **submatrix;
+    int *vector;
+}arg;
+
 int ** initialize_matrix(int size){
     int ** matrix = (int **) malloc(sizeof(int *) * size);
 
@@ -86,9 +94,9 @@ int printMenu(){
 
     printf("Choose how to send:\n");
     printf("[1] Send normally.\n");
-    printf("[2] Send with threads.\n");
-    printf("[3] Send with core-affine threads.\n");
+    printf("[2] Send with core-affine threads.\n");
     printf("[0] Exit.\n");
+    printf("[o] Choice: ");
     scanf("%d", &choice);
     getchar();
 

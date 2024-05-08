@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <ctype.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,16 +13,80 @@
 #define SLAVE 1
 #define TRUE 10
 #define FALSE 11
+#define ACK_MSG "ACK"
+
+int sockfd;
+pthread_mutex_t mutex; 
+
+void *send_data(void *args){
+    int size, to_send, sent_bytes, recv_bytes;
+    int ** submatrix = NULL, *vector = NULL;
+    char buffer[1024];
+    arg *temp = args;
+
+    size =  temp -> n / temp -> expected_client;
+    to_send = htonl(size);
+    pthread_mutex_lock(&mutex);
+    sent_bytes = send(temp -> socket, &to_send, sizeof(to_send), 0);
+    pthread_mutex_unlock(&mutex);
+
+    if(sent_bytes != sizeof(to_send)){
+        perror("[-] Failed to send: ");
+        exit(EXIT_FAILURE);
+    }
+
+    submatrix = temp -> submatrix;
+    for (int i = 0; i < temp -> n; i++){
+        for (int j = 0; j < size; j++){
+            to_send = htonl(submatrix[i][j]);
+            pthread_mutex_lock(&mutex);
+            sent_bytes = send(temp -> socket, &to_send, sizeof(to_send), 0);
+            pthread_mutex_unlock(&mutex);
+            if(sent_bytes != sizeof(to_send)){
+                perror("[-] Failed to send data: ");
+                exit(EXIT_FAILURE);
+            }
+        }
+    }
+
+    vector = temp -> vector;
+    for (int j = 0; j < temp -> n; j++) {
+        to_send = htonl(vector[j]);
+        pthread_mutex_lock(&mutex);
+        sent_bytes = send(temp -> socket, &to_send, sizeof(to_send), 0);
+        pthread_mutex_unlock(&mutex);
+        if(sent_bytes != sizeof(to_send)){
+            perror("[-] Failed to send data: ");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    pthread_mutex_lock(&mutex);
+    recv_bytes = recv(temp -> socket, buffer, sizeof(buffer), 0);
+    pthread_mutex_unlock(&mutex);
+    if(recv_bytes > 0){
+        printf("[+] Acknowledgment received.\n");
+    } 
+
+    if(recv_bytes == 0){
+        printf("[o] Connection closed by client.\n");
+    }
+
+    if(recv_bytes < 0){
+        perror("[-] Cannot receive the data: ");
+    }
+
+    return NULL;
+}
 
 
-
-void send_over_socket(int sockfd, int expected_client, int n, int *sockets, 
+void send_over_socket(int expected_client, int n, int *sockets, 
                         int * vector, int *** submatrices);
 void send_over_socket_threaded();
 void send_over_socket_thread_affine();
 
 int main(int argc, char *argv[]){
-    int n, p, s, sockfd, opt = 1;
+    int n, p, s, opt = 1;
     int ** matrix, * vector, ***submatrices;
     double * rho_vector, elapsed;
     struct sockaddr_in server, client;
@@ -150,13 +215,23 @@ int main(int argc, char *argv[]){
 
         choice = printMenu();
         switch(choice){
-            case 1: send_over_socket(sockfd, expected_clients, n, sockets, vector, submatrices);
+            case 1: send_over_socket(expected_clients, n, sockets, vector, submatrices);
                     break;
-            case 2: 
-                    break;
-            case 3:
+            case 2:
+                    if(pthread_mutex_init(&mutex, NULL) != 0){
+                        perror("[-] Cannot initialize mutex!");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    send_over_socket_thread_affine(expected_clients, n, sockets, vector, submatrices);
+
+                    if(pthread_mutex_destroy(&mutex) != 0){
+                        perror("[-] Cannot destroy mutex!");
+                        exit(EXIT_FAILURE);
+                    }
                     break;
             case 0:
+                    printf("[o] Canceling...\n");
                     break;
             default:
                     printf("[-] Invalid option!");
@@ -177,6 +252,7 @@ int main(int argc, char *argv[]){
         int bytes_to_recv, recv_bytes, cols;
         int *vector, **submatrix;
         char *token, netAddressString[256];
+        const char* ack_msg = ACK_MSG;
         net_address * server_addr;
 
         check_if_file_exists(&fd, "server.cfg");
@@ -204,12 +280,8 @@ int main(int argc, char *argv[]){
         server.sin_addr.s_addr = inet_addr(server_addr -> IP_addr);
         server.sin_port = htons(server_addr -> port); 
 
-        // server.sin_family = AF_INET;
-        // server.sin_addr.s_addr = inet_addr("127.0.0.1");
-        // server.sin_port = htons(8000); 
-
         if (connect(sockfd, (struct sockaddr*)&server, sizeof(server)) == -1) {
-            perror("connect()");
+            perror("[-] Cannot connect to the server: ");
             return 1;
         }
         
@@ -247,15 +319,17 @@ int main(int argc, char *argv[]){
             vector[i] = ntohl(bytes_to_recv);
         }
 
+        send(sockfd, ack_msg, strlen(ack_msg), 0);
     }
 
     close(sockfd);
     return EXIT_SUCCESS;
 }
 
-void send_over_socket(int sockfd, int expected_client, int n, int * sockets, int * vector, int *** submatrices){
+void send_over_socket(int expected_client, int n, int * sockets, int * vector, int *** submatrices){
     int size;
-    int to_send, sent_bytes;
+    int to_send, sent_bytes, recv_bytes;
+    char buffer[1024];
 
     for (int i = 0; i < expected_client; i++){
         size = n/expected_client;
@@ -285,13 +359,43 @@ void send_over_socket(int sockfd, int expected_client, int n, int * sockets, int
                 exit(EXIT_FAILURE);
             }
         }
+
+        int recv_bytes = recv(sockets[i], buffer, sizeof(buffer), 0);
+
+        if(recv_bytes > 0){
+            printf("[+] Acknowledgment received.\n");
+        } 
+
+        if(recv_bytes == 0){
+            printf("[o] Connection closed by client.\n");
+        }
+
+        if(recv_bytes < 0){
+            perror("[-] Cannot receive the data: ");
+        }
     }
 }
 
-void send_over_socket_threaded(){
 
-}
+void send_over_socket_thread_affine(int expected_client, int n, int * sockets, int * vector, int *** submatrices){
+    pthread_t *threads = NULL;
+    threads = (pthread_t *) malloc(sizeof(pthread_t) * expected_client);
 
-void send_over_socket_thread_affine(){
-    
+    for (int i = 0; i < expected_client; i++){
+        arg *args = (arg*) malloc(sizeof(arg));
+
+        args -> socket = sockets[i];
+        args -> n = n;
+        args -> expected_client = expected_client;
+        args -> submatrix = submatrices[i];
+        args -> vector = vector;
+
+        pthread_create(&threads[i], NULL, send_data, (void*) args);
+    }
+
+    for (int i = 0; i < expected_client; i++){
+        pthread_join(threads[i], NULL);
+    }
+
+    free(threads);
 }
