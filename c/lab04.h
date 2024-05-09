@@ -4,7 +4,6 @@
 typedef struct ADDR_COLL{
     char * IP_addr;
     int port;
-    struct ADDR_COLL * next;
 }net_address;
 
 typedef struct ARG_STRUCT{
@@ -12,7 +11,6 @@ typedef struct ARG_STRUCT{
     int n;
     int expected_client;
     int **submatrix;
-    int *vector;
 }arg;
 
 int ** initialize_matrix(int size){
@@ -75,15 +73,11 @@ int *** divide_into_submatrices(int ** matrix, int size, int div){
     return submatrices;
 }
 
-int is_address_found(char* IP_addr, int port, net_address *head){
-    net_address *temp = head;
-
-    while(temp != NULL){
-        if(strcmp(IP_addr, head -> IP_addr) == 0){
-            if(temp -> port == port) return TRUE;
-        } 
-
-        temp = temp -> next;
+int is_address_found(char* IP_addr, int port, int total_addr, net_address *head){
+    for(int i = 0; i < total_addr; i++){
+        if(strcmp(IP_addr, head[i].IP_addr) == 0){
+            if(head[i].port == port) return TRUE;
+        }
     }
     
     return FALSE;
@@ -112,4 +106,11 @@ double * initialize_rho_vector(int size){
 void check_if_file_exists(FILE** fd, char* filename){
     if (access(filename, F_OK) == 0)
         *fd = fopen(filename, "r");
+}
+
+void check_if_file_exists_w(FILE **file, char *filename) {
+  if (access(filename, F_OK) == 0)
+    *file = fopen(filename, "a");
+  if (access(filename, F_OK) != 0)
+    *file = fopen(filename, "w");
 }

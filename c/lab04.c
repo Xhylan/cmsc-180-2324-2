@@ -17,6 +17,7 @@
 #define TRUE 10
 #define FALSE 11
 #define ACK_MSG "ACK"
+#define MAX_ADDR 50
 
 int sockfd;
 pthread_mutex_t mutex; 
@@ -52,18 +53,6 @@ void *send_data(void *args){
         }
     }
 
-    vector = temp -> vector;
-    for (int j = 0; j < temp -> n; j++) {
-        to_send = htonl(vector[j]);
-        pthread_mutex_lock(&mutex);
-        sent_bytes = send(temp -> socket, &to_send, sizeof(to_send), 0);
-        pthread_mutex_unlock(&mutex);
-        if(sent_bytes != sizeof(to_send)){
-            perror("[-] Failed to send data: ");
-            exit(EXIT_FAILURE);
-        }
-    }
-
     pthread_mutex_lock(&mutex);
     recv_bytes = recv(temp -> socket, buffer, sizeof(buffer), 0);
     pthread_mutex_unlock(&mutex);
@@ -84,9 +73,9 @@ void *send_data(void *args){
 
 
 void send_over_socket(int expected_client, int n, int *sockets, 
-                        int * vector, int *** submatrices);
+                        int *** submatrices);
 void send_over_socket_thread_affine(int expected_client, int n, int *sockets,
-                                    int * vector, int *** submatrices);
+                                    int *** submatrices);
 
 int main(int argc, char *argv[]){
     int n, p, s, opt = 1; 
@@ -127,7 +116,8 @@ int main(int argc, char *argv[]){
 
 
     if (s == MASTER) {
-        int expected_clients = 0, connected = 0, size, choice, client_port;
+        int expected_clients = 0, connected = 0, size, choice, client_port,
+            total_addr = 0;
         int *sockets;
         char netAddressString[256], client_IP[INET_ADDRSTRLEN]; ;
         char *token;
@@ -139,7 +129,6 @@ int main(int argc, char *argv[]){
 
         srand(time(NULL));
         matrix = initialize_matrix(n);
-        vector = initialize_vector(n);
         submatrices = divide_into_submatrices(matrix, n, expected_clients);
 
         check_if_file_exists(&fd, "clients.cfg");
@@ -152,24 +141,14 @@ int main(int argc, char *argv[]){
         /*
          * Obtain all addresses from server.cfg.
          */
+        head = (net_address *) malloc(sizeof(net_address) * MAX_ADDR);
         while (fgets(netAddressString, 256, fd)){
-            net_address * newAddress = (net_address *) malloc(sizeof(net_address));
-
             token = strtok(netAddressString, ":");
-            newAddress -> IP_addr = token;
+            head[total_addr].IP_addr = token;
             token = strtok(NULL, ":");
-            newAddress -> port = atoi(token);
-            newAddress -> next = NULL;
+            head[total_addr].port = atoi(token);
             
-            if (head != NULL) {
-                net_address * temp = head;
-                while (temp -> next != NULL) temp = temp -> next;
-                temp -> next = newAddress;
-            }
-
-            if (head == NULL) {
-                head = newAddress;
-            }
+            total_addr++;
         }
 
 
@@ -208,7 +187,7 @@ int main(int argc, char *argv[]){
             inet_ntop(AF_INET, &(client.sin_addr), client_IP, client_addr_size);
             client_port = ntohs(client.sin_port);
 
-            if (is_address_found(client_IP, client_port, head) == FALSE){
+            if (is_address_found(client_IP, client_port, total_addr, head) == FALSE){
                 printf("[-] The server cannot accept connections from this address.\n ");
                 close(sockets[connected]);
                 continue;
@@ -217,21 +196,26 @@ int main(int argc, char *argv[]){
         connected++;
     }
 
+        check_if_file_exists_w(&fd, "log/res_sockets.txt");
+        fprintf(fd, "SIZE: %d, NO. OF SLAVES: %d\n", n, expected_clients);
+        fclose(fd);
+
         choice = printMenu();
+        clock_gettime(CLOCK_MONOTONIC, &start);
         switch(choice){
-            case 1: send_over_socket(expected_clients, n, sockets, vector, submatrices);
-                    break;
+            case 1: send_over_socket(expected_clients, n, sockets, submatrices);
+                     break;
             case 2:
-                    if(pthread_mutex_init(&mutex, NULL) != 0){
+                   if(pthread_mutex_init(&mutex, NULL) != 0){
                         perror("[-] Cannot initialize mutex!");
                         exit(EXIT_FAILURE);
                     }
 
-                    send_over_socket_thread_affine(expected_clients, n, sockets, vector, submatrices);
+                    send_over_socket_thread_affine(expected_clients, n, sockets, submatrices);
 
                     if(pthread_mutex_destroy(&mutex) != 0){
                         perror("[-] Cannot destroy mutex!");
-                        exit(EXIT_FAILURE);
+                         exit(EXIT_FAILURE);
                     }
                     break;
             case 0:
@@ -240,12 +224,34 @@ int main(int argc, char *argv[]){
             default:
                     printf("[-] Invalid option!");
                     break;
-        }
+            }
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        elapsed = (end.tv_sec - start.tv_sec);
+        elapsed += (end.tv_nsec - start.tv_nsec) / 1000000000.0;
+        printf("[o] The matrix transfer took %.6f seconds.\n", elapsed);
+        check_if_file_exists_w(&fd, "log/res_sockets.txt");
+        fprintf(fd, "%.6f\n", elapsed);
+
+        
 
         for(int i = 0; i < expected_clients; i++){
             close(sockets[i]);
         }
 
+        for(int i = 0; i < expected_clients; i++){
+            for(int j = 0; j < n; j++){
+                free(submatrices[i][j]);
+            }
+            free(submatrices[i]);
+        }
+        free(submatrices);
+
+        for(int i = 0; i < n; i++){
+            free(matrix);
+        }
+
+        free(vector);
+        free(head);
         free(sockets);
     }
 
@@ -278,7 +284,6 @@ int main(int argc, char *argv[]){
         server_addr -> IP_addr = token;
         token = strtok(NULL, ":");
         server_addr -> port = atoi(token);
-        server_addr -> next = NULL;
 
         server.sin_family = AF_INET;
         server.sin_addr.s_addr = inet_addr(server_addr -> IP_addr);
@@ -303,6 +308,7 @@ int main(int argc, char *argv[]){
         vector = (int *) malloc(sizeof(int) * n);
         submatrix = init_empty_matrix(n, cols);
 
+        clock_gettime(CLOCK_MONOTONIC, &start);
         for(int i = 0; i < n; i++){
             for(int j = 0; j < cols; j++){
                 recv_bytes = recv(sockfd, &bytes_to_recv, sizeof(bytes_to_recv), 0);
@@ -313,15 +319,10 @@ int main(int argc, char *argv[]){
                 submatrix[i][j] = ntohl(bytes_to_recv);
             }
         }
-
-        for(int i = 0; i < n; i++){
-            recv_bytes = recv(sockfd, &bytes_to_recv, sizeof(bytes_to_recv), 0);
-            if(recv_bytes != sizeof(bytes_to_recv)){
-                perror("[-] Failed to receive data: ");
-                exit(EXIT_FAILURE);
-            }
-            vector[i] = ntohl(bytes_to_recv);
-        }
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        elapsed = (end.tv_sec - start.tv_sec);
+        elapsed += (end.tv_nsec - start.tv_nsec) / 1000000000.0;
+        printf("[o] The matrix transfer took %.6f seconds.\n", elapsed);
 
         send(sockfd, ack_msg, strlen(ack_msg), 0);
     }
@@ -330,7 +331,7 @@ int main(int argc, char *argv[]){
     return EXIT_SUCCESS;
 }
 
-void send_over_socket(int expected_client, int n, int * sockets, int * vector, int *** submatrices){
+void send_over_socket(int expected_client, int n, int * sockets, int *** submatrices){
     int size;
     int to_send, sent_bytes, recv_bytes;
     char buffer[1024];
@@ -355,15 +356,6 @@ void send_over_socket(int expected_client, int n, int * sockets, int * vector, i
             }
         }
 
-        for (int j = 0; j < n; j++) {
-            to_send = htonl(vector[j]);
-            sent_bytes = send(sockets[i], &to_send, sizeof(to_send), 0);
-            if(sent_bytes != sizeof(to_send)){
-                perror("[-] Failed to send data: ");
-                exit(EXIT_FAILURE);
-            }
-        }
-
         int recv_bytes = recv(sockets[i], buffer, sizeof(buffer), 0);
 
         if(recv_bytes > 0){
@@ -381,7 +373,7 @@ void send_over_socket(int expected_client, int n, int * sockets, int * vector, i
 }
 
 
-void send_over_socket_thread_affine(int expected_client, int n, int * sockets, int * vector, int *** submatrices){
+void send_over_socket_thread_affine(int expected_client, int n, int * sockets, int *** submatrices){
     int core = 0, nprocs = sysconf(_SC_NPROCESSORS_CONF);
     pthread_t *threads = NULL;
     cpu_set_t cpuset;
@@ -394,7 +386,6 @@ void send_over_socket_thread_affine(int expected_client, int n, int * sockets, i
         args -> n = n;
         args -> expected_client = expected_client;
         args -> submatrix = submatrices[i];
-        args -> vector = vector;
 
         pthread_create(&threads[i], NULL, send_data, (void*) args);
 
