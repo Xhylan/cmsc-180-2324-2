@@ -31,13 +31,34 @@ int main() {
     scanf("%d", &status);
     getchar();
 
+    printf("Size: ");
+    scanf("%d", &size);
+    getchar();
+
+
     if (status == MASTER) {
+        int expected, connected = 0;
+        int *sockets, **matrix;
+
         socklen_t addrlen = sizeof(server);
         printf("[+] This program is the master program.\n");
 
-        printf("Size: ");
-        scanf("%d", &size);
+        printf("[o] Expected clients: ");
+        scanf("%d", &expected);
         getchar();
+
+        sockets = (int *) malloc(sizeof(int) * expected);
+        
+        matrix = (int **) malloc(sizeof(int *) * size);
+        for (int i = 0; i < size; i++) {
+            matrix[i] = (int *) malloc(sizeof(int) * size);
+        }
+
+        for (int i = 0; i < size; i++){
+            for(int j = 0; i < size; i++){
+                matrix[i][j] = i * size + j;
+            }
+        }
 
         /*
          * Forcefully binding server socket to a specified address.
@@ -56,33 +77,44 @@ int main() {
             exit(EXIT_FAILURE);
         }
 
-        while (1) {
-            new_socket = accept(sockfd, (struct sockaddr*) &server, &addrlen);
-            if(new_socket < 0) {
+        while (connected < expected) {
+            sockets[connected] = accept(sockfd, (struct sockaddr*) &server, &addrlen);
+            if(sockets[connected] < 0) {
                 perror("[-] Failed to accept the connection: ");
                 exit(EXIT_FAILURE);
             }
 
-            int size_nw = htonl(size);
-            int send_bytes = send(new_socket, &size_nw, sizeof(size_nw), 0);
-            if(send_bytes != sizeof(size_nw)){
+            connected++;
+        }
+
+        for (int i = 0; i < expected; i++){ 
+            int cols = size/expected;
+            int bytes = htonl(cols);
+            int sent = send(sockets[i], &bytes, sizeof(bytes), 0);
+
+            if(sent != sizeof(bytes)){
                 perror("[-] Failed to send data: ");
                 exit(EXIT_FAILURE);
             }
 
-            for(int i = 0; i < size; i++){
-                size_nw = htonl(i+1);
-                send_bytes = send(new_socket, &size_nw, sizeof(size_nw), 0);
-                if(send_bytes != sizeof(size_nw)){
-                    perror("[-] Failed to send data: ");
-                    exit(EXIT_FAILURE);
+            int remainder = size % expected;
+            int start = i * cols;
+            int end = (i + 1) * cols - 1;
+            for (int i = 0; i < size; i++) {
+                for (int j = start; j < end; j++) {
+                    sent = send(sockets[i], &bytes, sizeof(bytes), 0);
+
+                    if(sent != sizeof(bytes)){
+                        perror("[-] Failed to send data: ");
+                        exit(EXIT_FAILURE);
+                    }
                 }
             }
         }
     }
 
     if (status == SLAVE) {
-        int size_nw, recv_bytes, *array;
+        int size_nw, recv_bytes, **array;
 
         printf("[+] This program is the slave program.\n");
 
@@ -108,21 +140,11 @@ int main() {
 
         printf("Received the following from the server: %d\n", size);
 
-        array = (int*) malloc(sizeof(int) * size);
-        for(int i = 0; i < size; i++){
-            recv_bytes = recv(sockfd, &size_nw, sizeof(size_nw), 0);
-            if(recv_bytes != sizeof(size_nw)){
-                perror("[-] Failed to receive data: ");
-                exit(EXIT_FAILURE);
-            }
-            array[i] = ntohl(size_nw);
+        array = (int**) malloc(sizeof(int*) * size);
+        for (int i = 0; i < size; i++) {
+            
         }
-
-        printf("Received the following from the server: \n");
-
-        for(int i = 0; i < size; i++){
-            printf("%d ", array[i]);
-        }
+        
     }
 
     close(sockfd);
