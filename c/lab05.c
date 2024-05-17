@@ -29,7 +29,6 @@ int main(int argc, char *argv[]) {
     int n, p, s, opt = 1;
     FILE * fd;
     net_address *addr;
-    struct sockaddr_in server;
 
     SOCKFD = socket(AF_INET, SOCK_STREAM, 0);
     if (SOCKFD < 0) {
@@ -58,65 +57,59 @@ int main(int argc, char *argv[]) {
     * Code for when the program is the server.
     */
     if(s == MASTER){
-        int expected, current = 0;
-        int *sockets = NULL;
+        int expected, total_addr = 0, expected;
+        int * sockets;
+        struct sockaddr_in server;
+        char netAddressString[256], client_IP[INET_ADDRSTRLEN];
+        char *token;
 
-        printf("[o] Expected clients: ");
+        printf("Enter expected number of clients: ");
         scanf("%d", &expected);
-        getchar();
-
+        getchar(); 
+        
         sockets = (int *) malloc(sizeof(int) * expected);
 
-        /*
-         * Initialize all data structures.
-         */
-        srand(time(NULL));
-        MATRIX = initialize_matrix(n);
-        VECTOR = initialize_vector(n);
-        RHO_VECTOR = (double *) malloc(sizeof(double) * n);
-
         check_if_file_exists(&fd, "clients.cfg");
-
         if(fd == NULL){
-            printf("[-] Can't find client configuration file!\n");
-            return EXIT_FAILURE;
+            printf("[-] Cannot find the client configuration file. Exiting...\n");
+            exit(EXIT_FAILURE);
         }
 
         addr = (net_address *) malloc(sizeof(net_address) * MAX_ADDR);
-        
-        char netAddressString[256];
-        while (fgets(netAddressString, 256, fd)){
-            char *token = strtok(netAddressString, ":");
-            addr[current].IP_addr = token;
+        while(fgets(netAddressString, 256, fd)){
+            token = strtok(netAddressString, ":");
+            addr[total_addr].IP_addr = token;
             token = strtok(NULL, ":");
-            addr[current].port = atoi(token);
-            
-            current++;
+            addr[total_addr].port = atoi(token);
+
+            total_addr++;
         }
 
-        /*
-         * Setting the server.
-         */
         server.sin_family = AF_INET;
         server.sin_addr.s_addr = INADDR_ANY;
         server.sin_port = htons(p);
 
-        if(bind(SOCKFD, (struct sockaddr *) &server, sizeof(server) < 0)) {
-            perror("[-] Binding failed! ERR_DESC: ");
+        if(bind(SOCKFD, (struct sockaddr*) &server, sizeof(server)) == -1) {
+            perror("[-] Error binding address. ERR_DESC");
             exit(EXIT_FAILURE);
         }
 
-        /*
-         * Listen for client connections.
-         */
-        if(listen(SOCKFD, 5) < 0){
-            perror("[-] Can't listen to port! ERR_DESC: ");
+        if(listen(SOCKFD, 5) == -1) {
+            perror("[-] Can't listen to port. ERR_DESC");
             exit(EXIT_FAILURE);
         }
-    
-        for (int i = 0; i < expected; i++){
+
+        printf("[+] Server listening at port %d.\n", p);
+
+        for(int i = 0; i < expected; i++){
             struct sockaddr_in client;
             socklen_t client_size = sizeof(client);
+
+            sockets[i] = accept(sockfd, (struct sockaddr*) &client, client_size);
+            if (sockets[i] == -1) {
+                perror("[-] Failed to accept connection. ERR_DESC");
+                exit(EXIT_FAILURE);
+            }
         }
     }
 
@@ -124,6 +117,6 @@ int main(int argc, char *argv[]) {
     * Code for when the program is the client.
     */
     if(s == SLAVE){
-
+        struct sockaddr_in server, client;
     }
 }
