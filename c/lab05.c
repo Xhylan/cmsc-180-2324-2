@@ -25,6 +25,39 @@
 int SOCKFD, **MATRIX, *VECTOR;
 double *RHO_VECTOR;
 
+void send_over_socket(int expected, int n, int* sockets){
+    int start_index, end_index, remainder = n%expected;
+    int sub_size = n/expected;
+    int sent_bytes, bytes_to_send;
+
+    for(int i = 0; i < expected; i++){
+        bytes_to_send = htonl(sub_size);
+        sent_bytes = send(sockets[i], &bytes_to_send, sizeof(bytes_to_send), 0);
+        if(sent_bytes != sizeof(bytes_to_send)){
+            perror("[-] Failed to send data: ");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    for(int i = 0; i < expected; i++){
+        start_index = sub_size * i;
+        end_index = (i == expected - 1) 
+                    ? start_index + sub_size + remainder - 1
+                    : start_index + sub_size - 1; 
+
+        for(int j = 0; j < n; j++){
+            for(int k = start_index; k < end_index; k++){
+                bytes_to_send = htonl(MATRIX[j][k]);
+                sent_bytes = send(sockets[i], &bytes_to_send, sizeof(bytes_to_send), 0);
+                if(sent_bytes != sizeof(bytes_to_send)){
+                    perror("[-] Failed to send data: ");
+                    exit(EXIT_FAILURE);
+                }
+            }
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     int n, p, s, opt = 1;
     FILE * fd;
@@ -57,7 +90,7 @@ int main(int argc, char *argv[]) {
     * Code for when the program is the server.
     */
     if(s == MASTER){
-        int expected, total_addr = 0, expected;
+        int expected, total_addr = 0;
         int * sockets;
         struct sockaddr_in server;
         char netAddressString[256], client_IP[INET_ADDRSTRLEN];
@@ -105,12 +138,16 @@ int main(int argc, char *argv[]) {
             struct sockaddr_in client;
             socklen_t client_size = sizeof(client);
 
-            sockets[i] = accept(sockfd, (struct sockaddr*) &client, client_size);
+            sockets[i] = accept(SOCKFD, (struct sockaddr*) &client, &client_size);
             if (sockets[i] == -1) {
                 perror("[-] Failed to accept connection. ERR_DESC");
                 exit(EXIT_FAILURE);
             }
         }
+
+        check_if_file_exists_w(&fd, "log/res_sockets_2.txt");
+        fprintf(fd, "SIZE: %d, NO. OF SLAVES: %d\n", n, expected);
+        fclose(fd);
     }
 
     /*
